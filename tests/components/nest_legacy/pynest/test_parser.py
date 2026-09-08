@@ -31,11 +31,14 @@ from homeassistant.core import HomeAssistant
 from .. import async_load_fixture_json
 from ..const import (
     CAMERA_SERIAL,
+    HEAT_LINK_SERIAL,
+    HOT_WATER_TRANSITION_SECONDS,
     LOCK_SERIAL,
     PROTECT_SERIAL,
     TEMP_SENSOR_SERIAL,
     THERMOSTAT_KEY,
     THERMOSTAT_SERIAL,
+    hot_water_traits,
     protobuf_updates,
 )
 
@@ -326,6 +329,81 @@ async def test_protobuf_thermostat_dual_fuel(
     assert thermostat.has_dual_fuel
     assert thermostat.dual_fuel_breakpoint == pytest.approx(-2.187271, abs=1e-5)
     assert thermostat.temperature_scale is TemperatureScale.FAHRENHEIT
+
+
+@pytest.fixture
+def hot_water(raw_data: dict[str, Any]) -> nest_hvac_pb2.HotWaterTrait:
+    """Give the protobuf thermostat a Heat Link and return its hot water trait."""
+    raw_data[THERMOSTAT_KEY].update(hot_water_traits())
+    return raw_data[THERMOSTAT_KEY][nest_hvac_pb2.HotWaterTrait.DESCRIPTOR.full_name]
+
+
+@pytest.mark.usefixtures("hot_water")
+async def test_protobuf_heat_link(parser: NestParser, raw_data: dict[str, Any]) -> None:
+    """The Heat Link's own hardware and hot water state are parsed."""
+    heat_link = _by_serial(parser, raw_data)[HEAT_LINK_SERIAL]
+
+    assert isinstance(heat_link, NestHeatLink)
+    assert heat_link.is_protobuf
+    assert heat_link.model == "Heat Link for Learning Thermostat (3rd gen, EU)"
+    assert heat_link.software_version == "2.1"
+    assert heat_link.hot_water_mode is HotWaterMode.SCHEDULE
+    assert heat_link.hot_water_active
+    assert heat_link.hot_water_control_active
+    assert heat_link.current_temperature == 54.5
+
+
+async def test_protobuf_hot_water_away_is_the_state_not_the_setting(
+    parser: NestParser,
+    raw_data: dict[str, Any],
+    hot_water: nest_hvac_pb2.HotWaterTrait,
+) -> None:
+    """Away follows the trait, not the Home/Away Assist setting; see issue #68."""
+    heat_link = _by_serial(parser, raw_data)[HEAT_LINK_SERIAL]
+
+    assert isinstance(heat_link, NestHeatLink)
+    # The fixture follows the structure mode, but the structure is home.
+    assert heat_link.hot_water_away_enabled
+    assert not heat_link.hot_water_away_active
+
+    hot_water.awayActive = True
+
+    assert _by_serial(parser, raw_data)[HEAT_LINK_SERIAL].hot_water_away_active
+
+
+async def test_protobuf_hot_water_temperature_needs_a_sensor(
+    parser: NestParser,
+    raw_data: dict[str, Any],
+    hot_water: nest_hvac_pb2.HotWaterTrait,
+) -> None:
+    """An empty temperature message is not a 0 degree reading; see issue #69."""
+    hot_water.ClearField("temperature")
+    hot_water.temperature.SetInParent()
+
+    heat_link = _by_serial(parser, raw_data)[HEAT_LINK_SERIAL]
+
+    assert isinstance(heat_link, NestHeatLink)
+    assert hot_water.HasField("temperature")
+    assert heat_link.current_temperature is None
+
+
+async def test_protobuf_hot_water_next_transition_time(
+    parser: NestParser,
+    raw_data: dict[str, Any],
+    hot_water: nest_hvac_pb2.HotWaterTrait,
+) -> None:
+    """The next hot water schedule change is parsed; see issue #70."""
+    heat_link = _by_serial(parser, raw_data)[HEAT_LINK_SERIAL]
+
+    assert isinstance(heat_link, NestHeatLink)
+    assert heat_link.hot_water_next_transition_time == HOT_WATER_TRANSITION_SECONDS
+
+    hot_water.ClearField("nextTransitionTime")
+
+    assert (
+        _by_serial(parser, raw_data)[HEAT_LINK_SERIAL].hot_water_next_transition_time
+        == 0
+    )
 
 
 async def test_protobuf_thermostat_hardware_version(

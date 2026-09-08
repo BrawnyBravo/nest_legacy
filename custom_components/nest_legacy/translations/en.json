@@ -250,6 +250,9 @@
             "heads_up": {
                 "name": "Heads-up"
             },
+            "home_away_assist": {
+                "name": "Home/Away Assist"
+            },
             "humidifier": {
                 "name": "Humidifier"
             },

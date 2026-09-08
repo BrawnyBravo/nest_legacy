@@ -1306,6 +1306,8 @@ class NestParser:
         float | None,
         HotWaterMode,
         bool,
+        bool,
+        int,
         str | None,
         str | None,
         str | None,
@@ -1325,11 +1327,20 @@ class NestParser:
         current_water_temperature = None
         hot_water_mode = HotWaterMode.OFF
         hot_water_away_enabled = False
+        hot_water_away_active = False
+        hot_water_next_transition_time = 0
 
         if hw_trait:
             hot_water_active = hw_trait.boilerActive
             hot_water_control_active = hw_trait.controlActive
-            if hw_trait.HasField("temperature"):
+            hot_water_away_active = hw_trait.awayActive
+            if hw_trait.HasField("nextTransitionTime"):
+                hot_water_next_transition_time = _safe_to_seconds(
+                    hw_trait.nextTransitionTime
+                )
+            # A Heat Link without a hot water sensor still sends the temperature
+            # sub-message, but empty, which decodes to a bogus 0.0; see issue #69.
+            if hw_trait.HasField("temperature") and hw_trait.temperature.value:
                 current_water_temperature = _round_current_temp(
                     hw_trait.temperature.value
                 )
@@ -1375,6 +1386,8 @@ class NestParser:
             current_water_temperature,
             hot_water_mode,
             hot_water_away_enabled,
+            hot_water_away_active,
+            hot_water_next_transition_time,
             heat_link_serial_number,
             heat_link_model,
             heat_link_sw_version,
@@ -1651,6 +1664,8 @@ class NestParser:
             current_water_temperature,
             hot_water_mode,
             hot_water_away_enabled,
+            hot_water_away_active,
+            hot_water_next_transition_time,
             heat_link_serial_number,
             heat_link_model,
             heat_link_sw_version,
@@ -1731,6 +1746,8 @@ class NestParser:
             current_water_temperature=current_water_temperature,
             hot_water_mode=hot_water_mode,
             hot_water_away_enabled=hot_water_away_enabled,
+            hot_water_away_active=hot_water_away_active,
+            hot_water_next_transition_time=hot_water_next_transition_time,
             has_dehumidifier=has_dehumidifier,
             dehumidifier_state=dehumidifier_state,
             has_humidifier=has_humidifier,
@@ -2509,6 +2526,8 @@ class NestParser:
             hot_water_boost_time_to_end=thermostat.hot_water_boost_time_to_end,
             hot_water_mode=thermostat.hot_water_mode,
             hot_water_away_enabled=thermostat.hot_water_away_enabled,
+            hot_water_away_active=thermostat.hot_water_away_active,
+            hot_water_next_transition_time=thermostat.hot_water_next_transition_time,
             current_temperature=thermostat.current_water_temperature,
             target_temperature=thermostat.hot_water_temperature,
             temperature_scale=thermostat.temperature_scale,

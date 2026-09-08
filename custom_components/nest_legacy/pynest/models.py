@@ -151,6 +151,8 @@ class NestThermostat(NestDevice):
     has_hot_water_temperature: bool = False
     hot_water_mode: HotWaterMode = HotWaterMode.OFF
     hot_water_away_enabled: bool = False
+    hot_water_away_active: bool = False
+    hot_water_next_transition_time: int = 0
     hot_water_boost_time_to_end: int = 0
     hot_water_temperature: float | None = None
     current_water_temperature: float | None = None
@@ -227,6 +229,8 @@ class NestHeatLink(NestDevice):
     hot_water_boost_time_to_end: int = 0
     hot_water_mode: HotWaterMode = HotWaterMode.OFF
     hot_water_away_enabled: bool = False
+    hot_water_away_active: bool = False
+    hot_water_next_transition_time: int = 0
     current_temperature: float | None = None
     target_temperature: float | None = None
     temperature_scale: TemperatureScale | None = None
