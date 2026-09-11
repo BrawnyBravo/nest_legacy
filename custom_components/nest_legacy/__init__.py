@@ -51,6 +51,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: NestConfigEntry) -> bool
 
     entry.runtime_data = coordinator
 
+    # Without this, changing an option does nothing until the integration is
+    # reloaded or Home Assistant restarts - the options are only read at setup.
+    # That is worst for the camera-event option, whose whole point is "I turned
+    # it off and the noise stopped": it would look broken on first use.
+    entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
+
     # Start subscribers to get all device data (including from protobuf)
     coordinator.async_start_subscriber()
 
@@ -67,6 +73,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: NestConfigEntry) -> bool
     await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
 
     return True
+
+
+async def _async_entry_updated(hass: HomeAssistant, entry: NestConfigEntry) -> None:
+    """Reload the entry when its options change.
+
+    Deliberately scoped to options. Reauth and reconfigure finish with
+    ``async_update_reload_and_abort``, which reloads already; reloading again on
+    their data write would double the work at the worst possible moment.
+    """
+    coordinator = getattr(entry, "runtime_data", None)
+    if coordinator is not None and coordinator.options_snapshot == dict(entry.options):
+        return
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: NestConfigEntry) -> bool:
