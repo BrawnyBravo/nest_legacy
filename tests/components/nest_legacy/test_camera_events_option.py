@@ -15,8 +15,6 @@ import pytest
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from . import setup_integration
-
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 
@@ -30,6 +28,7 @@ async def _poll_started(
     hass: HomeAssistant, entry: MockConfigEntry, options: dict | None
 ) -> bool:
     """Set the integration up with ``options`` and report whether polling began."""
+    entry.add_to_hass(hass)
     if options is not None:
         hass.config_entries.async_update_entry(entry, options=options)
     with patch(
@@ -37,7 +36,7 @@ async def _poll_started(
         "._async_poll_camera_events",
         new_callable=AsyncMock,
     ) as poll:
-        await setup_integration(hass, entry)
+        await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
         return poll.called
 
@@ -94,6 +93,7 @@ async def test_disabling_camera_events_leaves_other_updates_running(
     Thermostats and temperature sensors are why this install exists; they arrive
     over the subscribe/observe channels, which are started by the same method.
     """
+    mock_config_entry.add_to_hass(hass)
     hass.config_entries.async_update_entry(
         mock_config_entry, options={CONF_ENABLE_CAMERA_EVENTS: False}
     )
@@ -114,7 +114,7 @@ async def test_disabling_camera_events_leaves_other_updates_running(
             new_callable=AsyncMock,
         ) as observe,
     ):
-        await setup_integration(hass, mock_config_entry)
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
     assert poll.called is False
