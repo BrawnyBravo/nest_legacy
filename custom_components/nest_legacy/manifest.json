@@ -25,5 +25,5 @@
     "googleapis-common-protos>=1.70.0",
     "protobuf>=6.31.1"
   ],
-  "version": "0.6.0-house.1"
+  "version": "0.6.0-house.2"
 }
