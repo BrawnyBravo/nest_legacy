@@ -118,18 +118,19 @@ async def test_disabling_camera_events_leaves_other_updates_running(
     assert observe.called is True
 
 
-async def test_turning_the_option_off_takes_effect_without_a_manual_reload(
+async def test_turning_the_option_off_through_the_options_flow_stops_polling(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
 ) -> None:
-    """The actual user story: turn it off, the polling stops.
+    """The actual user story, driven the way a person drives it.
 
-    The options are only read at setup, so without an update listener the poll
-    would keep running until the integration was reloaded or Home Assistant
-    restarted — and the option would look broken on first use, which is the
-    complaint that started this work. Asserting on the option's stored value
-    would not have caught that.
+    Goes through the options flow rather than writing the entry directly,
+    because that is the only path that proves what a user will experience: submit
+    the form, the noise stops, without reloading anything by hand. The options
+    flow subclasses ``OptionsFlowWithReload``, so Home Assistant reloads the
+    entry itself — asserting on the stored option value would pass even if the
+    poll kept running.
     """
     mock_config_entry.add_to_hass(hass)
     with patch(
@@ -142,37 +143,13 @@ async def test_turning_the_option_off_takes_effect_without_a_manual_reload(
         assert poll.called is True, "polling should be on before we turn it off"
 
         poll.reset_mock()
-        hass.config_entries.async_update_entry(
-            mock_config_entry, options={CONF_ENABLE_CAMERA_EVENTS: False}
+        result = await hass.config_entries.options.async_init(
+            mock_config_entry.entry_id
+        )
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], {CONF_ENABLE_CAMERA_EVENTS: False}
         )
         await hass.async_block_till_done()
 
+    assert mock_config_entry.options[CONF_ENABLE_CAMERA_EVENTS] is False
     assert poll.called is False
-
-
-async def test_unrelated_entry_update_does_not_reload(
-    hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
-    mock_nest_client: AsyncMock,
-) -> None:
-    """A data-only write must not reload on top of the flows that already do.
-
-    Reauth and reconfigure finish with ``async_update_reload_and_abort``. If the
-    listener reloaded on any entry write, those would reload twice — at the
-    moment the integration is least healthy.
-    """
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-
-    with patch(
-        "homeassistant.config_entries.ConfigEntries.async_reload",
-        new_callable=AsyncMock,
-    ) as reload:
-        hass.config_entries.async_update_entry(
-            mock_config_entry,
-            data={**mock_config_entry.data, "cookies": "SID=rotated"},
-        )
-        await hass.async_block_till_done()
-
-    assert reload.called is False
