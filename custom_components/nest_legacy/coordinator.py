@@ -91,6 +91,10 @@ class NestCoordinator(DataUpdateCoordinator[dict[str, NestDevice]]):
             ),
         )
         self.parser = NestParser()
+        # What the options were when this coordinator was built. The update
+        # listener compares against it so a reauth/reconfigure data write does
+        # not trigger a second reload on top of the one those flows already do.
+        self.options_snapshot: dict[str, Any] = dict(entry.options)
         self._subscribe_task: asyncio.Task | None = None
         self._observe_task: asyncio.Task | None = None
         self._poll_task: asyncio.Task | None = None
