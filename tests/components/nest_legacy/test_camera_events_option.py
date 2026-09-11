@@ -57,9 +57,7 @@ async def test_camera_events_polled_when_enabled(
 ) -> None:
     """Explicitly enabling it polls, same as the default."""
     assert (
-        await _poll_started(
-            hass, mock_config_entry, {CONF_ENABLE_CAMERA_EVENTS: True}
-        )
+        await _poll_started(hass, mock_config_entry, {CONF_ENABLE_CAMERA_EVENTS: True})
         is True
     )
 
@@ -76,9 +74,7 @@ async def test_camera_events_not_polled_when_disabled(
     running.
     """
     assert (
-        await _poll_started(
-            hass, mock_config_entry, {CONF_ENABLE_CAMERA_EVENTS: False}
-        )
+        await _poll_started(hass, mock_config_entry, {CONF_ENABLE_CAMERA_EVENTS: False})
         is False
     )
 
