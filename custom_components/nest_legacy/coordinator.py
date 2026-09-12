@@ -21,16 +21,13 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import (
     CONF_ACCOUNT_TYPE,
     CONF_COOKIES,
-    CONF_ENABLE_CAMERA_EVENTS,
     CONF_ENABLE_PROTOBUF_CAMERA,
-    CONF_ENABLE_PROTOBUF_LOCK,
     CONF_ENABLE_PROTOBUF_PROTECT,
     CONF_ENABLE_PROTOBUF_STRUCTURE,
     CONF_ENABLE_PROTOBUF_THERMOSTAT,
     CONF_EVENT_POLL_INTERVAL,
     CONF_FIELD_TEST,
     CONF_ISSUE_TOKEN,
-    DEFAULT_ENABLE_CAMERA_EVENTS,
     DEFAULT_EVENT_POLL_INTERVAL,
     DOMAIN,
 )
@@ -75,7 +72,6 @@ class NestCoordinator(DataUpdateCoordinator[dict[str, NestDevice]]):
         self.client = NestClient(
             async_create_clientsession(hass),
             field_test=entry.data.get(CONF_FIELD_TEST, False),
-            enable_protobuf_lock=entry.options.get(CONF_ENABLE_PROTOBUF_LOCK, True),
             enable_protobuf_thermostat=entry.options.get(
                 CONF_ENABLE_PROTOBUF_THERMOSTAT, True
             ),
@@ -296,22 +292,15 @@ class NestCoordinator(DataUpdateCoordinator[dict[str, NestDevice]]):
             self._observe_task = self.config_entry.async_create_background_task(
                 self.hass, self._async_observe_for_updates(), "nest-observe-protobuf"
             )
-            # Camera event polling is opt-out. It runs forever for every online,
-            # streaming camera, and an install that only wants thermostats or
-            # temperature sensors gets nothing from it but API traffic and
-            # repeated warnings. None of the protobuf options above stop it -
-            # they only choose which channel a device type arrives on.
+            # An interval of 0 disables camera event polling.
             if self.config_entry.options.get(
-                CONF_ENABLE_CAMERA_EVENTS, DEFAULT_ENABLE_CAMERA_EVENTS
+                CONF_EVENT_POLL_INTERVAL, DEFAULT_EVENT_POLL_INTERVAL
             ):
                 self._poll_task = self.config_entry.async_create_background_task(
                     self.hass, self._async_poll_camera_events(), "nest-poll-events"
                 )
             else:
-                _LOGGER.debug(
-                    "Camera event polling disabled by the %s option; not starting it",
-                    CONF_ENABLE_CAMERA_EVENTS,
-                )
+                _LOGGER.debug("Camera event polling is disabled, not starting it")
 
     def async_stop_subscriber(self) -> None:
         """Stop the background task."""
@@ -646,6 +635,12 @@ class NestCoordinator(DataUpdateCoordinator[dict[str, NestDevice]]):
             poll_interval = self.config_entry.options.get(
                 CONF_EVENT_POLL_INTERVAL, DEFAULT_EVENT_POLL_INTERVAL
             )
+            if not poll_interval:
+                # Normally the entry is reloaded when the option changes, so the
+                # task is never created. Stop rather than spin if it changes
+                # under us, since a 0 interval would sleep for 0 every loop.
+                _LOGGER.debug("Camera event polling is disabled, stopping it")
+                return
             loop_start = time.time()
 
             try:

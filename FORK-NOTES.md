@@ -36,7 +36,7 @@ Upstream keeps `"version": "0.0.0"` in the tree and rewrites it at release time 
 (`.github/workflows/release.yml`). Since this fork installs from the branch, that release step never
 runs, and the version Home Assistant displays would be a permanent `0.0.0`.
 
-Set to `0.6.0-house.1`: the upstream release this fork is based on, plus a `-house.N` suffix so HACS
+Set to `0.7.0-house.1`: the upstream release this fork is based on, plus a `-house.N` suffix so HACS
 and the Home Assistant UI show it as distinct from upstream's own build.
 
 **When bumping:** raise the base to whatever upstream release `main` now sits on, and reset the suffix
@@ -60,8 +60,9 @@ That should print nothing. If it prints anything, the branch is not ready to be 
 ## Version
 
 `custom_components/nest_legacy/manifest.json` reads `<upstream release>-house.<n>`. Raise the base
-when upstream moves; raise only the suffix for changes made here. Currently `0.6.0-house.2`:
-upstream `v0.6.0`, plus the sync workflow, the HACS install change, and the camera-events option.
+when upstream moves; raise only the suffix for changes made here. Currently `0.7.0-house.1`:
+upstream `v0.7.0`, plus the sync workflow and the HACS install change. The camera-events option was
+retired: upstream fixed the same problem in v0.7.0 (an event poll interval of 0 disables the poll).
 
 ## Resolving a sync conflict in these files
 
