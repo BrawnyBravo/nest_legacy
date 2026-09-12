@@ -292,9 +292,15 @@ class NestCoordinator(DataUpdateCoordinator[dict[str, NestDevice]]):
             self._observe_task = self.config_entry.async_create_background_task(
                 self.hass, self._async_observe_for_updates(), "nest-observe-protobuf"
             )
-            self._poll_task = self.config_entry.async_create_background_task(
-                self.hass, self._async_poll_camera_events(), "nest-poll-events"
-            )
+            # An interval of 0 disables camera event polling.
+            if self.config_entry.options.get(
+                CONF_EVENT_POLL_INTERVAL, DEFAULT_EVENT_POLL_INTERVAL
+            ):
+                self._poll_task = self.config_entry.async_create_background_task(
+                    self.hass, self._async_poll_camera_events(), "nest-poll-events"
+                )
+            else:
+                _LOGGER.debug("Camera event polling is disabled, not starting it")
 
     def async_stop_subscriber(self) -> None:
         """Stop the background task."""
@@ -629,6 +635,12 @@ class NestCoordinator(DataUpdateCoordinator[dict[str, NestDevice]]):
             poll_interval = self.config_entry.options.get(
                 CONF_EVENT_POLL_INTERVAL, DEFAULT_EVENT_POLL_INTERVAL
             )
+            if not poll_interval:
+                # Normally the entry is reloaded when the option changes, so the
+                # task is never created. Stop rather than spin if it changes
+                # under us, since a 0 interval would sleep for 0 every loop.
+                _LOGGER.debug("Camera event polling is disabled, stopping it")
+                return
             loop_start = time.time()
 
             try:

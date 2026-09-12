@@ -341,6 +341,9 @@
         "data": {
           "event_poll_interval": "Camera event poll interval (seconds)"
         },
+        "data_description": {
+          "event_poll_interval": "How often to check for camera events. Set to 0 to disable camera event polling."
+        },
         "sections": {
           "protobuf": {
             "data": {

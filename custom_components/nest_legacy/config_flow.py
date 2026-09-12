@@ -203,7 +203,7 @@ class NestOptionsFlowHandler(OptionsFlowWithReload):
                 default=self.config_entry.options.get(
                     CONF_EVENT_POLL_INTERVAL, DEFAULT_EVENT_POLL_INTERVAL
                 ),
-            ): int,
+            ): vol.All(vol.Coerce(int), vol.Range(min=0)),
             vol.Required(CONF_SECTION_PROTOBUF): section(
                 vol.Schema(
                     {
