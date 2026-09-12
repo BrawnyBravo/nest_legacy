@@ -21,7 +21,6 @@ from .const import (
     CONF_ACCOUNT_TYPE,
     CONF_COOKIES,
     CONF_ENABLE_PROTOBUF_CAMERA,
-    CONF_ENABLE_PROTOBUF_LOCK,
     CONF_ENABLE_PROTOBUF_PROTECT,
     CONF_ENABLE_PROTOBUF_STRUCTURE,
     CONF_ENABLE_PROTOBUF_THERMOSTAT,
@@ -198,10 +197,6 @@ class NestOptionsFlowHandler(OptionsFlowWithReload):
                     CONF_EVENT_POLL_INTERVAL, DEFAULT_EVENT_POLL_INTERVAL
                 ),
             ): int,
-            vol.Optional(
-                CONF_ENABLE_PROTOBUF_LOCK,
-                default=self.config_entry.options.get(CONF_ENABLE_PROTOBUF_LOCK, True),
-            ): bool,
             vol.Optional(
                 CONF_ENABLE_PROTOBUF_THERMOSTAT,
                 default=self.config_entry.options.get(

@@ -22,7 +22,6 @@ from .const import (
     CONF_ACCOUNT_TYPE,
     CONF_COOKIES,
     CONF_ENABLE_PROTOBUF_CAMERA,
-    CONF_ENABLE_PROTOBUF_LOCK,
     CONF_ENABLE_PROTOBUF_PROTECT,
     CONF_ENABLE_PROTOBUF_STRUCTURE,
     CONF_ENABLE_PROTOBUF_THERMOSTAT,
@@ -73,7 +72,6 @@ class NestCoordinator(DataUpdateCoordinator[dict[str, NestDevice]]):
         self.client = NestClient(
             async_create_clientsession(hass),
             field_test=entry.data.get(CONF_FIELD_TEST, False),
-            enable_protobuf_lock=entry.options.get(CONF_ENABLE_PROTOBUF_LOCK, True),
             enable_protobuf_thermostat=entry.options.get(
                 CONF_ENABLE_PROTOBUF_THERMOSTAT, True
             ),

@@ -17,7 +17,6 @@ CONF_EVENT_POLL_INTERVAL: Final = "event_poll_interval"
 DEFAULT_EVENT_POLL_INTERVAL: Final = 5
 
 # Protobuf enable options
-CONF_ENABLE_PROTOBUF_LOCK: Final = "enable_protobuf_lock"
 CONF_ENABLE_PROTOBUF_THERMOSTAT: Final = "enable_protobuf_thermostat"
 CONF_ENABLE_PROTOBUF_STRUCTURE: Final = "enable_protobuf_structure"
 CONF_ENABLE_PROTOBUF_PROTECT: Final = "enable_protobuf_protect"

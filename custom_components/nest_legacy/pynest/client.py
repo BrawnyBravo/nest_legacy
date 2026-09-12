@@ -402,7 +402,6 @@ class NestClient:
         self,
         session: ClientSession | None = None,
         field_test: bool = False,
-        enable_protobuf_lock: bool = True,
         enable_protobuf_thermostat: bool = True,
         enable_protobuf_structure: bool = False,
         enable_protobuf_protect: bool = False,
@@ -421,7 +420,6 @@ class NestClient:
         self._legacy_protobuf_events_warned: bool = False
         self._protobuf_events_unauthorized: set[str] = set()
 
-        self._enable_protobuf_lock = enable_protobuf_lock
         self._enable_protobuf_thermostat = enable_protobuf_thermostat
         self._enable_protobuf_structure = enable_protobuf_structure
         self._enable_protobuf_protect = enable_protobuf_protect
@@ -430,14 +428,15 @@ class NestClient:
         # Build set of traits to observe based on flags
         self._observe_traits: set[type[Message]] = set()
         self._observe_traits.update(_OBSERVER_ALWAYS_INCLUDE_TRAITS)
+        # Locks are only ever exposed over protobuf, so their traits are
+        # unconditional; there is no REST alternative to fall back to.
+        self._observe_traits.update(_OBSERVE_LOCK_TRAITS)
         if enable_protobuf_protect:
             self._observe_traits.update(_OBSERVE_PROTECT_TRAITS)
         if enable_protobuf_camera:
             self._observe_traits.update(_OBSERVE_CAMERA_TRAITS)
         if enable_protobuf_thermostat:
             self._observe_traits.update(_OBSERVE_THERMOSTAT_TRAITS)
-        if enable_protobuf_lock:
-            self._observe_traits.update(_OBSERVE_LOCK_TRAITS)
         if enable_protobuf_structure:
             self._observe_traits.update(_OBSERVE_STRUCTURE_TRAITS)
 
