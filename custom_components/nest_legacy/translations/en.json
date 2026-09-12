@@ -339,11 +339,19 @@
         "step": {
             "user": {
                 "data": {
-                    "enable_protobuf_camera": "Enable Protobuf for cameras (recommended for Google accounts)",
-                    "enable_protobuf_protect": "Enable Protobuf for Protects (experimental)",
-                    "enable_protobuf_structure": "Enable Protobuf for structure (experimental)",
-                    "enable_protobuf_thermostat": "Enable Protobuf for thermostats (recommended)",
                     "event_poll_interval": "Camera event poll interval (seconds)"
+                },
+                "sections": {
+                    "protobuf": {
+                        "data": {
+                            "enable_protobuf_camera": "Cameras (recommended for Google accounts)",
+                            "enable_protobuf_protect": "Protects (experimental)",
+                            "enable_protobuf_structure": "Home/structure (experimental)",
+                            "enable_protobuf_thermostat": "Thermostats (recommended)"
+                        },
+                        "description": "Choose which devices use the newer protobuf protocol instead of the legacy REST API. Leave these alone unless you are troubleshooting.",
+                        "name": "Protocol selection"
+                    }
                 }
             }
         }

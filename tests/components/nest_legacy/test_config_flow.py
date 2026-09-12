@@ -15,6 +15,7 @@ from custom_components.nest_legacy.const import (
     CONF_EVENT_POLL_INTERVAL,
     CONF_FIELD_TEST,
     CONF_ISSUE_TOKEN,
+    CONF_SECTION_PROTOBUF,
     DOMAIN,
 )
 from custom_components.nest_legacy.pynest.exceptions import (
@@ -341,17 +342,27 @@ async def test_options_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    options = {
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_EVENT_POLL_INTERVAL: 30,
+            CONF_SECTION_PROTOBUF: {
+                CONF_ENABLE_PROTOBUF_THERMOSTAT: False,
+                CONF_ENABLE_PROTOBUF_STRUCTURE: True,
+                CONF_ENABLE_PROTOBUF_PROTECT: True,
+                CONF_ENABLE_PROTOBUF_CAMERA: False,
+            },
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    # The protobuf section is flattened away, so the coordinator and the client
+    # keep reading the options as a flat dict.
+    assert init_integration.options == {
         CONF_EVENT_POLL_INTERVAL: 30,
         CONF_ENABLE_PROTOBUF_THERMOSTAT: False,
         CONF_ENABLE_PROTOBUF_STRUCTURE: True,
         CONF_ENABLE_PROTOBUF_PROTECT: True,
         CONF_ENABLE_PROTOBUF_CAMERA: False,
     }
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], options
-    )
-    await hass.async_block_till_done()
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert init_integration.options == options
