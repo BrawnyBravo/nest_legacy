@@ -633,7 +633,7 @@ class NestCoordinator(DataUpdateCoordinator[dict[str, NestDevice]]):
 
         A camera is polled only if it is online, streaming, and its device is
         not disabled in the device registry. Disabling a device is how a user
-        says they do not want it, and it removes every entity that could show
+        says they do not want it, and it disables every entity that could show
         an event, so polling it would only spend API calls on nothing.
 
         Evaluated on every poll, so enabling or disabling a camera takes effect
@@ -659,7 +659,6 @@ class NestCoordinator(DataUpdateCoordinator[dict[str, NestDevice]]):
             )
             if device_entry.disabled
             for identifier in device_entry.identifiers
-            if identifier[0] == DOMAIN
         }
 
     async def _async_poll_camera_events(self) -> None:

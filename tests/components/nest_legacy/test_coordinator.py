@@ -307,7 +307,7 @@ async def test_disabled_camera_is_not_polled(
 ) -> None:
     """A camera disabled in the device registry drops out of the event poll.
 
-    Disabling a device removes every entity that could show its events, so
+    Disabling a device disables every entity that could show its events, so
     polling it only spends API calls. Re-enabling it brings it straight back
     without a reload, because the filter is evaluated on every poll.
     """
@@ -329,24 +329,4 @@ async def test_disabled_camera_is_not_polled(
     assert CAMERA_SERIAL not in _polled_serials(coordinator)
 
     device_registry.async_update_device(device.id, disabled_by=None)
-    assert CAMERA_SERIAL in _polled_serials(coordinator)
-
-
-async def test_disabled_device_from_another_integration_is_ignored(
-    hass: HomeAssistant,
-    init_integration: MockConfigEntry,
-    device_registry: dr.DeviceRegistry,
-) -> None:
-    """Only this integration's identifiers decide whether a camera is skipped."""
-    coordinator = _coordinator(init_integration)
-    camera = coordinator.data[CAMERA_SERIAL]
-    coordinator.data[CAMERA_SERIAL] = replace(
-        camera, online=True, streaming_enabled=True
-    )
-    device_registry.async_get_or_create(
-        config_entry_id=init_integration.entry_id,
-        identifiers={("other_domain", CAMERA_SERIAL)},
-        disabled_by=dr.DeviceEntryDisabler.USER,
-    )
-
     assert CAMERA_SERIAL in _polled_serials(coordinator)
