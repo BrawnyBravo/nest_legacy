@@ -7,6 +7,11 @@ name: Sync with upstream
 # own "-house.N" version in manifest.json, and republishing upstream's release
 # tags from here would make the fork's version indistinguishable from upstream's.
 #
+# EXPECTED CONFLICTS: manifest.json (the version line) and hacs.json carry
+# deliberate fork-only edits, so a sync will sometimes conflict on them. Take
+# upstream's file and re-apply the divergence described in FORK-NOTES.md.
+# A conflict is resolved, never left to drift.
+#
 # Do NOT create GitHub Releases on this fork without reading the install notes in
 # PLAN.md first: for the Govee fork a release silently switches HACS from tracking
 # the default branch to tracking releases.
