@@ -1,11 +1,12 @@
 """Tests for the Nest Legacy coordinator's connection handling."""
 
 import asyncio
+from dataclasses import replace
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
 from aiohttp import ClientError
-from custom_components.nest_legacy.const import CONF_EVENT_POLL_INTERVAL
+from custom_components.nest_legacy.const import CONF_EVENT_POLL_INTERVAL, DOMAIN
 from custom_components.nest_legacy.coordinator import NestCoordinator
 from custom_components.nest_legacy.pynest.exceptions import (
     BadCredentialsException,
@@ -13,6 +14,7 @@ from custom_components.nest_legacy.pynest.exceptions import (
     NestServiceException,
     NotAuthenticatedException,
 )
+from custom_components.nest_legacy.pynest.models import NestCamera
 import pytest
 
 from homeassistant.components.climate import (
@@ -23,6 +25,7 @@ from homeassistant.components.climate import (
 from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import device_registry as dr
 
 from .const import LOCK_KEY, STRUCTURE_KEY
 
@@ -30,6 +33,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 REST_CLIMATE = "climate.hallway_hallway_thermostat"
 PROTOBUF_CLIMATE = "climate.hallway_hallway_upstairs"
+CAMERA_SERIAL = "18B430CCCCCC0002"
 
 
 @pytest.fixture
@@ -289,3 +293,40 @@ async def test_event_poll_interval_of_zero_disables_polling(
         await hass.async_block_till_done()
 
     assert poll.called is expect_polling
+
+
+def _polled_serials(coordinator: NestCoordinator) -> set[str]:
+    """Return the serial numbers the camera event poll would query."""
+    return {camera.serial_number for camera in coordinator._cameras_to_poll()}
+
+
+async def test_disabled_camera_is_not_polled(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """A camera disabled in the device registry drops out of the event poll.
+
+    Disabling a device disables every entity that could show its events, so
+    polling it only spends API calls. Re-enabling it brings it straight back
+    without a reload, because the filter is evaluated on every poll.
+    """
+    coordinator = _coordinator(init_integration)
+    camera = coordinator.data[CAMERA_SERIAL]
+    assert isinstance(camera, NestCamera)
+    coordinator.data[CAMERA_SERIAL] = replace(
+        camera, online=True, streaming_enabled=True
+    )
+    device = device_registry.async_get_or_create(
+        config_entry_id=init_integration.entry_id,
+        identifiers={(DOMAIN, CAMERA_SERIAL)},
+    )
+    assert CAMERA_SERIAL in _polled_serials(coordinator)
+
+    device_registry.async_update_device(
+        device.id, disabled_by=dr.DeviceEntryDisabler.USER
+    )
+    assert CAMERA_SERIAL not in _polled_serials(coordinator)
+
+    device_registry.async_update_device(device.id, disabled_by=None)
+    assert CAMERA_SERIAL in _polled_serials(coordinator)
