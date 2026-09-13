@@ -8,13 +8,13 @@ from unittest.mock import AsyncMock, patch
 from aiohttp import ClientError
 from custom_components.nest_legacy.const import CONF_EVENT_POLL_INTERVAL, DOMAIN
 from custom_components.nest_legacy.coordinator import NestCoordinator
-from custom_components.nest_legacy.pynest.models import NestCamera
 from custom_components.nest_legacy.pynest.exceptions import (
     BadCredentialsException,
     EmptyResponseException,
     NestServiceException,
     NotAuthenticatedException,
 )
+from custom_components.nest_legacy.pynest.models import NestCamera
 import pytest
 
 from homeassistant.components.climate import (
