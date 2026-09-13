@@ -19,7 +19,7 @@ Upstream contributions from this fork:
 - [#72](https://github.com/tronikos/nest_legacy/pull/72): an option to stop camera event polling.
   Closed; upstream solved the same problem in v0.7.0 (an event poll interval of 0 disables the poll).
 - [#73](https://github.com/tronikos/nest_legacy/pull/73): skip cameras disabled in the device registry
-  when polling events. Open.
+  when polling events. Merged 2026-09-13 and released in v0.7.1.
 
 ## What it carries that upstream does not
 
@@ -50,7 +50,7 @@ Upstream keeps `"version": "0.0.0"` in the tree and rewrites it at release time 
 (`.github/workflows/release.yml`). A branch install never runs that step, so the version would read
 `0.0.0` forever.
 
-The fork sets `<upstream release>-house.<n>`, currently `0.7.0-house.1`. Raise the base to whatever
+The fork sets `<upstream release>-house.<n>`, currently `0.7.1-house.1`. Raise the base to whatever
 upstream release `main` now sits on and reset the suffix to `.1`; raise only the suffix for changes
 made here.
 
