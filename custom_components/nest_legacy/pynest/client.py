@@ -278,7 +278,7 @@ _DUAL_FUEL_OVERRIDE_MAP: dict[
     ),
 }
 
-_USER_AGENT = "Nest/5.82.2 (iOScom.nestlabs.jasper.release) os=18.5"
+_USER_AGENT = "Nest/5.87.0 (iOScom.nestlabs.jasper.release) os=26.4"
 
 _NEST_ENVIRONMENTS: dict[str, NestEnvironment] = {
     Environment.PRODUCTION: NestEnvironment(
