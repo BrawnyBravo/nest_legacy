@@ -183,7 +183,10 @@ class NestConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id=step_id,
             data_schema=self.add_suggested_values_to_schema(schema, user_input),
             errors=errors,
-            description_placeholders={"docs_url": _DOCS_URL},
+            description_placeholders={
+                "docs_url": _DOCS_URL,
+                "issue_token_prefix": _ISSUE_TOKEN_PREFIX,
+            },
         )
 
     async def async_step_google_account(

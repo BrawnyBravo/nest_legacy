@@ -10,7 +10,7 @@
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
             "invalid_cookies": "The cookies don't include a Google sign-in session (`SID`, `__Secure-1PSID` or `__Secure-3PSID`). Copy the entire `Cookie` request header value of the `iframerpc` request. Selecting it by hand can cut it short, so use your browser's Copy Value.",
-            "invalid_issue_token": "The issue token must be the full URL of the `iframerpc` request. It starts with `https://accounts.google.com/o/oauth2/iframerpc` and contains `action=issueToken`.",
+            "invalid_issue_token": "The issue token must be the full URL of the `iframerpc` request. It starts with `{issue_token_prefix}` and contains `action=issueToken`.",
             "unknown": "Unexpected error"
         },
         "step": {
