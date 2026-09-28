@@ -180,41 +180,46 @@ You will be asked to select your account type. Follow the instructions below bas
 
 ### Option A: Google Account
 
-For accounts migrated to Google, or created after August 2019. You will need to retrieve an `issue_token` and `cookies` from your browser.
+For accounts migrated to Google, or created after August 2019. You will need to copy an `issue_token` and `cookies` from your browser.
 
-⚠️ **CRITICAL BROWSER WARNING:** **Do NOT use Google Chrome or Microsoft Edge** to get these cookies. Chromium-based browsers use aggressive, hardware-bound security sessions with Google. If you use Chrome, your integration will authenticate successfully but will fail after a few hours or immediately upon restarting Home Assistant. Spoofing the User-Agent in Chrome will not bypass this.
-**You MUST use Safari or Firefox** to capture a long-lived cookie.
+⚠️ **Use Firefox.** Do **not** use Google Chrome, Microsoft Edge or any other Chromium-based browser, not even in Incognito mode. They bind Google's sign-in session to your device ([Device Bound Session Credentials](https://developer.chrome.com/docs/web-platform/device-bound-session-credentials)), so credentials copied out of them work at first and then stop working within a few hours. Safari also works, but only with the manual method.
 
-#### Recommended Method: Nest Token Extractor (Easiest)
+**Sign in fresh, copy the values, then close the window without signing out.** A Firefox private window is the easiest way to do this: closing it throws away the browser's copy of the session without signing you out of Google. A browser window that stays signed in keeps using the same session, and signing out of `home.nest.com` or Google invalidates the credentials immediately.
 
-We recommend using the **[Nest Token Extractor](https://github.com/tronikos/nest-token-extractor)** browser extension to automatically capture and format these credentials for you in seconds.
-1. Install the extension for **Firefox** or **Safari** (do not use Chrome).
-2. Open the extension, choose your environment, and click **Open Nest & Start Extraction**.
-3. Sign in to your account. Copy the extracted **Issue Token** and **Cookies** straight into Home Assistant!
-4. *Firefox Users:* If the Cookies field remains blank, click the **Shield** icon in your Firefox address bar on `home.nest.com` and toggle off **Enhanced Tracking Protection**, then retry.
+Once set up, the integration saves the cookies Google rotates while it runs, so the credentials survive Home Assistant restarts.
+
+#### Recommended Method: Nest Token Extractor
+
+The **[Nest Token Extractor](https://github.com/tronikos/nest-token-extractor)** browser extension captures the credentials for you.
+
+1. [Install the extension in Firefox](https://github.com/tronikos/nest-token-extractor#mozilla-firefox). Use v1.0.7 or newer; older versions could pick up the cookies of your regular Firefox windows while extracting from a private window.
+2. Open a private window (Ctrl+Shift+P, or Cmd+Shift+P on macOS). If the extension icon is missing there, go to `about:addons`, open **Nest Token Extractor** and set **Run in Private Windows** to **Allow**.
+3. In the private window, click the extension icon, choose your environment, and click **Open Nest & Start Extraction**.
+4. Sign in with Google and wait for the green checkmark on the extension icon.
+5. Click the extension icon again and copy the **Issue Token** and **Cookies** into Home Assistant.
+6. Close the private window. Do not sign out.
+
+If the **Cookies** field stays empty, click the **Shield** icon in the address bar on `home.nest.com`, turn off **Enhanced Tracking Protection**, and restart the extraction.
 
 #### Manual Method
 
 (Instructions adapted from the `homebridge-nest` project).
 
-1. Open a **Safari** or **Firefox** browser tab.
-   - **Do NOT use Private/Incognito mode in Firefox**, as it enforces strict cookie isolation that will result in a "No active session found" error, even if tracking protection is disabled.
-   - **Firefox Users:** You **MUST** click on the **Shield** icon in the Firefox address bar on `home.nest.com` and uncheck/toggle off **Enhanced Tracking Protection** (both on `home.nest.com` and `accounts.google.com` if prompted). If ETP is enabled, Firefox blocks or isolates Google's cookies inside the nested iframe, resulting in `Invalid authentication` in Home Assistant.
-2. Open Developer Tools (usually right-click -> Inspect, or in Safari: Develop -> Show Web Inspector).
-3. Click on the **Network** tab. Make sure **Preserve Log** (or "Persist Logs") is checked.
-4. In the 'Filter' box, enter `issueToken`.
-5. Go to `home.nest.com`, and click **Sign in with Google**. Log into your account.
-6. One network call (beginning with `iframerpc`) will appear in the Dev Tools window. Click on it.
-7. In the **Headers** tab, under **General** (or "Headers" in Safari), copy the entire **Request URL**. This is your `Issue token`.
-8. Clear the filter box and now enter `oauth2/iframe`.
-9. Several network calls will appear. Click on the **last `iframe` call**.
-10. In the **Headers** tab, under **Request Headers**, find the `cookie` entry. Copy the **entire cookie string** (it will be very long). This is your `Cookies`.
-11. Paste these values into the Home Assistant configuration form.
-12. **Do not log out of `home.nest.com`**, as this will immediately invalidate your credentials. Just close the browser tab.
+1. Open a Firefox private window (Ctrl+Shift+P, or Cmd+Shift+P on macOS).
+2. Open Developer Tools (F12) and select the **Network** tab. In its settings (gear icon), check **Persist Logs**.
+3. Go to `home.nest.com`. Click the **Shield** icon in the address bar and turn off **Enhanced Tracking Protection** for the site. Private windows use strict tracking protection, which can block the Google sign-in frame and leave you in a sign-in loop.
+4. Click **Sign in with Google** and sign in.
+5. In the Network filter box, enter `issueToken`. One request, `iframerpc`, will appear.
+6. Right-click it and choose **Copy Value** > **Copy URL**. This is your `Issue token`.
+7. Click the request and, in the **Headers** panel under **Request Headers**, right-click the `Cookie` header and choose **Copy Value**. This is your `Cookies`. Don't select the text by hand, since that can cut it short. It must include `SID=`.
+8. Paste both values into the Home Assistant configuration form.
+9. Close the private window. Do not sign out.
+
+In Safari, enable **Settings** > **Advanced** > **Show features for web developers**, open a private window and use **Develop** > **Show Web Inspector** with **Preserve Log** checked. The `iframerpc` request shows the URL under **Summary** and the `Cookie` header under **Request**. Quit Safari when you are done, without signing out.
 
 ### Option B: Legacy Nest Account
 
-For older, non-migrated Nest accounts. You will need to obtain an `access_token`.
+For older, non-migrated Nest accounts. You will need to obtain an `access_token`. The [Nest Token Extractor](https://github.com/tronikos/nest-token-extractor) can also get it for you, in any browser.
 
 1. Go to `https://home.nest.com` in your browser and log in.
 2. Once logged in, open a new tab and go to `https://home.nest.com/session`.
@@ -231,13 +236,14 @@ If you are part of the Google Field Test program, check the "Use Field Test envi
 
 Once set up, you can click "Configure" on the integration entry to tweak settings:
 
-- **Camera Event Poll Interval:** How often to check for new camera events (default: 5 seconds).
-- **Protobuf Options:** Enable/Disable the use of the newer Protobuf API for specific device types (Locks, Thermostats, Protects, Structure, Cameras).
+- **Camera Event Poll Interval:** How often to check for new camera events (default: 5 seconds). Set it to 0 to disable polling.
+- **Protobuf Options:** Enable/Disable the use of the newer Protobuf API for specific device types (Thermostats, Protects, Structure, Cameras). Locks always use the Protobuf API.
 
 ## Troubleshooting
 
 - **Authentication Errors:** If you receive authentication errors, your cookies or tokens may have expired. You will need to re-fetch them using the steps above and use the "Reconfigure" option in the integration.
-- **"No active session found" / Invalid authentication on setup:** If your debug logs show `BadCredentialsException('No active session found.')`, the cookies you provided did not contain a valid Google login session. This is almost always caused by browser privacy settings (like Firefox's Enhanced Tracking Protection) or using a Private/Incognito window which isolates cross-site cookies. Try again in a normal window (you can create a fresh browser profile if you want to avoid logging out of your primary account) or use the recommended **Nest Token Extractor** extension.
+- **Credentials stop working after a few hours:** They were most likely copied from Chrome or Edge, or from a browser window that stayed signed in. Get them again in a Firefox private window, following the steps above, and close the window right after.
+- **"No active session found" / Invalid authentication on setup:** If your debug logs show `BadCredentialsException('No active session found.')`, the cookies you provided did not contain a valid Google sign-in session. Usually the cookie value was cut short while copying (use **Copy Value**), was copied from a different request than `iframerpc`, or Enhanced Tracking Protection blocked the Google sign-in frame. Turn off Enhanced Tracking Protection for `home.nest.com` and try again, or use the **Nest Token Extractor** extension.
 - **Missing Devices:** Ensure your devices are visible in the Nest app. Some newer Google Nest devices (like the 2021+ battery cameras) are exclusively on the Google Home app and may not appear here, or may have limited functionality via the legacy API.
 
 ## Credits
