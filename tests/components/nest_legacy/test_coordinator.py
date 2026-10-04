@@ -9,6 +9,7 @@ from aiohttp import ClientError
 from custom_components.nest_legacy.const import CONF_EVENT_POLL_INTERVAL, DOMAIN
 from custom_components.nest_legacy.coordinator import NestCoordinator
 from custom_components.nest_legacy.pynest.exceptions import (
+    AuthenticationFailedException,
     BadCredentialsException,
     EmptyResponseException,
     NestServiceException,
@@ -207,16 +208,22 @@ async def test_observer_failure_only_affects_protobuf_devices(
     assert hass.states.get(REST_CLIMATE).state != STATE_UNAVAILABLE
 
 
+@pytest.mark.parametrize(
+    "error",
+    [
+        NotAuthenticatedException("expired"),
+        # PERMISSION_DENIED for a stale session, see issue #81.
+        AuthenticationFailedException("authentication failed"),
+    ],
+)
 async def test_command_retries_after_reauthenticating(
     hass: HomeAssistant,
     init_integration: MockConfigEntry,
     mock_nest_client: AsyncMock,
+    error: Exception,
 ) -> None:
     """An expired session during a command is refreshed and the command retried."""
-    mock_nest_client.async_set_device_data.side_effect = [
-        NotAuthenticatedException("expired"),
-        None,
-    ]
+    mock_nest_client.async_set_device_data.side_effect = [error, None]
 
     await hass.services.async_call(
         CLIMATE_DOMAIN,

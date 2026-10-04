@@ -536,6 +536,7 @@
         }),
         'nest.trait.structure.StructureInfoTrait': dict({
           'name': '**REDACTED**',
+          'rtsStructureId': 'structure.00000000-0000-0000-0000-000000000001',
         }),
         'nest.trait.structure.StructureLocationTrait': dict({
           'addressLines': list([

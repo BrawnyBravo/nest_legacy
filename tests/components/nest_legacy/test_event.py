@@ -103,3 +103,67 @@ async def test_unrelated_event_types_are_ignored(
 
     assert hass.states.get(CHIME_ENTITY).state == STATE_UNKNOWN
     assert hass.states.get(MOTION_ENTITY).state != STATE_UNKNOWN
+
+
+@pytest.mark.parametrize(
+    "types",
+    [["sound"], ["sound", "person-talking"], ["sound", "dog-barking"]],
+)
+async def test_sound_events(
+    hass: HomeAssistant, init_integration: MockConfigEntry, types: list[str]
+) -> None:
+    """Sounds are reported under the names the REST cuepoint API uses."""
+    _fire(hass, types)
+    await hass.async_block_till_done()
+
+    state = hass.states.get(MOTION_ENTITY)
+    assert state is not None
+    assert state.attributes[ATTR_EVENT_TYPE] == "camera_sound"
+
+
+@pytest.mark.parametrize(
+    ("types", "expected"),
+    [
+        (["motion", "animal"], "camera_animal"),
+        (["motion", "animal", "animal-dog"], "camera_animal"),
+        (["motion", "animal", "animal-cat"], "camera_animal"),
+        (["motion", "person", "animal"], "camera_person"),
+    ],
+)
+async def test_animal_events(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    types: list[str],
+    expected: str,
+) -> None:
+    """An animal sighting is reported unless a person was also seen."""
+    _fire(hass, types)
+    await hass.async_block_till_done()
+
+    state = hass.states.get(MOTION_ENTITY)
+    assert state is not None
+    assert state.attributes[ATTR_EVENT_TYPE] == expected
+
+
+@pytest.mark.parametrize(
+    ("types", "expected"),
+    [
+        (["motion", "vehicle"], "camera_vehicle"),
+        (["motion", "person", "vehicle"], "camera_person"),
+        (["motion", "person", "package-delivered"], "camera_package_delivered"),
+        (["motion", "face", "package-retrieved"], "camera_package_retrieved"),
+    ],
+)
+async def test_vehicle_and_package_events(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    types: list[str],
+    expected: str,
+) -> None:
+    """A package event wins over the person carrying it, a vehicle does not."""
+    _fire(hass, types)
+    await hass.async_block_till_done()
+
+    state = hass.states.get(MOTION_ENTITY)
+    assert state is not None
+    assert state.attributes[ATTR_EVENT_TYPE] == expected

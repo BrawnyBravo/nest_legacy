@@ -64,7 +64,10 @@ def _structure_traits() -> dict[str, Any]:
         entry.whereId.resourceId = where_id
         entry.label.literal = label
 
-    info = nest_structure_pb2.StructureInfoTrait(name="Test Home")
+    info = nest_structure_pb2.StructureInfoTrait(
+        name="Test Home",
+        rtsStructureId="structure.00000000-0000-0000-0000-000000000001",
+    )
     location = nest_structure_pb2.StructureLocationTrait(
         addressLines=["1 Test Street"],
     )

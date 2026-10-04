@@ -20,6 +20,8 @@ from custom_components.nest_legacy.pynest.models import (
 from custom_components.nest_legacy.pynest.parser import NestParser
 from custom_components.nest_legacy.pynest.protobuf_gen.nest.trait import (
     hvac_pb2 as nest_hvac_pb2,
+    located_pb2 as nest_located_pb2,
+    structure_pb2 as nest_structure_pb2,
 )
 from custom_components.nest_legacy.pynest.protobuf_gen.weave.trait import (
     description_pb2 as weave_description_pb2,
@@ -33,8 +35,10 @@ from ..const import (
     CAMERA_SERIAL,
     HEAT_LINK_SERIAL,
     HOT_WATER_TRANSITION_SECONDS,
+    LOCK_KEY,
     LOCK_SERIAL,
     PROTECT_SERIAL,
+    STRUCTURE_KEY,
     TEMP_SENSOR_SERIAL,
     THERMOSTAT_KEY,
     THERMOSTAT_SERIAL,
@@ -43,6 +47,8 @@ from ..const import (
 )
 
 THERMOSTAT = "09AA00AA00AA0AAA"
+
+_HEAT_LINK_CONNECTION = nest_hvac_pb2.HeatLinkSettingsTrait.HeatLinkConnectionType
 
 
 @pytest.fixture
@@ -106,6 +112,24 @@ async def test_locations_come_from_both_apis(
     assert devices["09AA00AA00AA0AAA"].location == "Hallway"
     assert devices["18B430CCCCCC0001"].location == "Bedroom"
     assert devices[LOCK_SERIAL].location == "Front Door"
+
+
+async def test_room_names_are_trimmed(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """Stray whitespace in a room name stays out of the location."""
+    for where in raw_data["where.00000000-0000-0000-0000-000000000001"]["wheres"]:
+        where["name"] = f" {where['name']} "
+    located = raw_data[LOCK_KEY][
+        nest_located_pb2.DeviceLocatedSettingsTrait.DESCRIPTOR.full_name
+    ]
+    located.whereLabel.literal = " Kids Room"
+
+    devices = _by_serial(parser, raw_data)
+
+    assert devices["09AA00AA00AA0AAA"].location == "Hallway"
+    assert devices["18B430CCCCCC0001"].location == "Bedroom"
+    assert devices[LOCK_SERIAL].location == "Kids Room"
 
 
 async def test_thermostat_values(parser: NestParser, raw_data: dict[str, Any]) -> None:
@@ -280,6 +304,104 @@ async def test_structure_needs_its_protobuf_key(
     ]
 
 
+def _structures(parser: NestParser, raw_data: dict[str, Any]) -> list[NestStructure]:
+    """Return the parsed structures."""
+    return [
+        device
+        for device in parser.parse_all(raw_data).devices
+        if isinstance(device, NestStructure)
+    ]
+
+
+def _add_home(raw_data: dict[str, Any], rest_id: str, resource_id: str) -> None:
+    """Add a second home with both its REST bucket and protobuf resource."""
+    raw_data[f"structure.{rest_id}"] = {
+        **raw_data["structure.00000000-0000-0000-0000-000000000001"],
+        "name": "Cabin",
+        "away": True,
+    }
+    raw_data[resource_id] = {
+        **raw_data[STRUCTURE_KEY],
+        nest_structure_pb2.StructureInfoTrait.DESCRIPTOR.full_name: (
+            nest_structure_pb2.StructureInfoTrait(
+                name="Cabin", rtsStructureId=f"structure.{rest_id}"
+            )
+        ),
+    }
+
+
+async def test_rest_structure_is_not_duplicated(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """A home with a REST bucket is parsed from it, not again from protobuf."""
+    structures = _structures(parser, raw_data)
+
+    assert len(structures) == 1
+    assert not structures[0].is_protobuf
+    assert structures[0].object_key == STRUCTURE_KEY
+
+
+async def test_protobuf_structure(parser: NestParser, raw_data: dict[str, Any]) -> None:
+    """Without its REST bucket, the home is parsed from protobuf instead.
+
+    It keeps the serial number of the REST structure, so switching the
+    protobuf option does not replace the device.
+    """
+    del raw_data["structure.00000000-0000-0000-0000-000000000001"]
+
+    structures = _structures(parser, raw_data)
+
+    assert len(structures) == 1
+    structure = structures[0]
+    assert structure.is_protobuf
+    assert structure.object_key == STRUCTURE_KEY
+    assert structure.serial_number == "00000000-0000-0000-0000-000000000001"
+    assert structure.name == "Test Home"
+    assert structure.mode is StructureMode.HOME
+    # The street address is not a room to suggest as the device's area.
+    assert structure.location is None
+
+
+async def test_each_home_gets_its_own_protobuf_key(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """Each REST structure controls the protobuf resource that names it."""
+    # Listed first, so picking the first protobuf structure would get it wrong.
+    raw_data = {"STRUCTURE_00000000000000AA": {}, **raw_data}
+    _add_home(raw_data, "cabin-id", "STRUCTURE_00000000000000AA")
+
+    keys = {
+        structure.serial_number: structure.object_key
+        for structure in _structures(parser, raw_data)
+    }
+
+    assert keys == {
+        "00000000-0000-0000-0000-000000000001": STRUCTURE_KEY,
+        "cabin-id": "STRUCTURE_00000000000000AA",
+    }
+
+
+async def test_ambiguous_protobuf_structure_is_skipped(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """With several unidentified protobuf homes, none is guessed."""
+    raw_data[STRUCTURE_KEY] = {}
+    raw_data["STRUCTURE_00000000000000AA"] = {}
+
+    assert not _structures(parser, raw_data)
+
+
+async def test_lone_unidentified_protobuf_structure_is_used(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """A single protobuf home without StructureInfoTrait is still matched."""
+    raw_data[STRUCTURE_KEY] = {}
+
+    structures = _structures(parser, raw_data)
+
+    assert [structure.object_key for structure in structures] == [STRUCTURE_KEY]
+
+
 @pytest.mark.parametrize(
     ("away", "vacation", "expected"),
     [
@@ -351,6 +473,74 @@ async def test_protobuf_heat_link(parser: NestParser, raw_data: dict[str, Any]) 
     assert heat_link.hot_water_active
     assert heat_link.hot_water_control_active
     assert heat_link.current_temperature == 54.5
+
+
+def _without_hot_water_flags(raw_data: dict[str, Any]) -> None:
+    """Clear the hot water flags the capabilities trait may carry."""
+    capabilities = raw_data[THERMOSTAT_KEY][
+        nest_hvac_pb2.HvacEquipmentCapabilitiesTrait.DESCRIPTOR.full_name
+    ]
+    capabilities.hasHotWaterControl = False
+    capabilities.hasHotWaterTemperature = False
+
+
+@pytest.mark.usefixtures("hot_water")
+async def test_protobuf_heat_link_without_capability_flags(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """The hot water traits alone prove the Heat Link is there.
+
+    A Thermostat E reports heat stages on HvacEquipmentCapabilitiesTrait and
+    leaves both hot water flags unset.
+    """
+    _without_hot_water_flags(raw_data)
+
+    heat_link = _by_serial(parser, raw_data)[HEAT_LINK_SERIAL]
+
+    assert isinstance(heat_link, NestHeatLink)
+
+
+@pytest.mark.usefixtures("hot_water")
+async def test_no_protobuf_heat_link_for_central_heating_only(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """A Heat Link wired for central heating only has no hot water.
+
+    Its heat connection type is set like that of a Heat Link that also drives
+    hot water, so it is not proof of hot water control.
+    """
+    _without_hot_water_flags(raw_data)
+    traits = raw_data[THERMOSTAT_KEY]
+    traits.pop(nest_hvac_pb2.HotWaterTrait.DESCRIPTOR.full_name)
+    traits.pop(nest_hvac_pb2.HotWaterSettingsTrait.DESCRIPTOR.full_name)
+    traits[nest_hvac_pb2.HeatLinkSettingsTrait.DESCRIPTOR.full_name] = (
+        nest_hvac_pb2.HeatLinkSettingsTrait(
+            heatConnectionType=_HEAT_LINK_CONNECTION.HEAT_LINK_CONNECTION_TYPE_ON_OFF,
+            hotWaterConnectionType=_HEAT_LINK_CONNECTION.HEAT_LINK_CONNECTION_TYPE_NOT_CONNECTED,
+        )
+    )
+
+    assert HEAT_LINK_SERIAL not in _by_serial(parser, raw_data)
+
+
+@pytest.mark.usefixtures("hot_water")
+async def test_no_protobuf_heat_link_from_empty_traits(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """An empty trait is not proof of a Heat Link.
+
+    Traits are sometimes delivered with no fields set.
+    """
+    _without_hot_water_flags(raw_data)
+    traits = raw_data[THERMOSTAT_KEY]
+    traits[nest_hvac_pb2.HotWaterTrait.DESCRIPTOR.full_name] = (
+        nest_hvac_pb2.HotWaterTrait()
+    )
+    traits[nest_hvac_pb2.HotWaterSettingsTrait.DESCRIPTOR.full_name] = (
+        nest_hvac_pb2.HotWaterSettingsTrait()
+    )
+
+    assert HEAT_LINK_SERIAL not in _by_serial(parser, raw_data)
 
 
 async def test_protobuf_hot_water_away_is_the_state_not_the_setting(
@@ -522,6 +712,16 @@ async def test_protobuf_protect(parser: NestParser, raw_data: dict[str, Any]) ->
     assert protect.name == "Landing"
     assert not protect.smoke_status
     assert not protect.co_status
+
+
+async def test_unnamed_camera(parser: NestParser, raw_data: dict[str, Any]) -> None:
+    """A camera named only by its room gets the same name as over protobuf."""
+    raw_data["quartz.18B430CCCCCC0002"]["description"] = ""
+
+    camera = _by_serial(parser, raw_data)["18B430CCCCCC0002"]
+
+    assert camera.name == "Camera"
+    assert camera.location == "Front Door"
 
 
 async def test_protobuf_camera(parser: NestParser, raw_data: dict[str, Any]) -> None:
