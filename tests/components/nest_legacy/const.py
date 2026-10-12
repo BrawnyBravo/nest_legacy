@@ -185,12 +185,52 @@ def hot_water_traits() -> dict[str, Any]:
     }
 
 
+def _temperature_trait(celsius: float) -> nest_sensor_pb2.TemperatureTrait:
+    """Return a TemperatureTrait reading the given temperature."""
+    trait = nest_sensor_pb2.TemperatureTrait()
+    trait.temperatureValue.temperature.value = celsius
+    return trait
+
+
 def _thermostat_traits() -> dict[str, Any]:
-    """Return the traits of a protobuf thermostat with a dual fuel system."""
+    """Return the traits of a protobuf thermostat with a dual fuel system.
+
+    It heats to 72 F, has a single speed fan and a humidifier, and has the
+    temperature sensor associated without using it.
+    """
     hvac = nest_hvac_pb2.HvacControlTrait()
     display = nest_hvac_pb2.DisplaySettingsTrait(
         temperatureScale=nest_hvac_pb2.DisplaySettingsTrait.TemperatureScale.TEMPERATURE_SCALE_F
     )
+    capabilities = nest_hvac_pb2.HvacEquipmentCapabilitiesTrait(
+        hasStage1Heat=True, hasStage1Cool=True, hasHumidifier=True
+    )
+    target = nest_hvac_pb2.TargetTemperatureSettingsTrait()
+    target.targetTemperature.setpointType = (
+        nest_hvac_pb2.SetPointScheduleSettingsTrait.SetPointType.SET_POINT_TYPE_HEAT
+    )
+    target.targetTemperature.heatingTarget.value = 22.222222
+    target.targetTemperature.coolingTarget.value = 24.444444
+    target.enabled.value = True
+    eco = nest_hvac_pb2.EcoModeStateTrait(
+        ecoMode=nest_hvac_pb2.EcoModeStateTrait.EcoMode.ECO_MODE_INACTIVE
+    )
+    humidity = nest_sensor_pb2.HumidityTrait()
+    humidity.humidityValue.humidity.value = 43.0
+    humidity_control = nest_hvac_pb2.HumidityControlSettingsTrait()
+    humidity_control.humidifierTargetHumidity.enabled = False
+    humidity_control.humidifierTargetHumidity.value = 35.0
+    fan_capabilities = nest_hvac_pb2.FanControlCapabilitiesTrait(
+        maxAvailableSpeed=nest_hvac_pb2.FanControlTrait.FanSpeedSetting.FAN_SPEED_SETTING_STAGE1
+    )
+    fan_settings = nest_hvac_pb2.FanControlSettingsTrait()
+    fan_settings.timerDuration.FromSeconds(900)
+    battery = nest_sensor_pb2.BatteryVoltageTrait()
+    battery.batteryValue.batteryVoltage.value = 3.86
+    rcs = nest_hvac_pb2.RemoteComfortSensingSettingsTrait()
+    rcs.associatedRcsSensors.add().deviceId.resourceId = TEMP_SENSOR_KEY
+    rcs.activeRcsSelection.rcsSourceType = nest_hvac_pb2.RemoteComfortSensingSettingsTrait.RcsSourceType.RCS_SOURCE_TYPE_BACKPLATE
+    current_temperature = _temperature_trait(21.11)
     identity = weave_description_pb2.DeviceIdentityTrait(
         serialNumber=THERMOSTAT_SERIAL,
         softwareVersion="6.2-24",
@@ -209,6 +249,20 @@ def _thermostat_traits() -> dict[str, Any]:
         _trait_key(nest_hvac_pb2.HvacControlTrait): hvac,
         _trait_key(nest_hvac_pb2.DisplaySettingsTrait): display,
         _trait_key(nest_hvac_pb2.EquipmentSettingsTrait): dual_fuel_trait(),
+        _trait_key(nest_hvac_pb2.HvacEquipmentCapabilitiesTrait): capabilities,
+        _trait_key(nest_hvac_pb2.TargetTemperatureSettingsTrait): target,
+        _trait_key(nest_hvac_pb2.EcoModeStateTrait): eco,
+        _trait_key(nest_hvac_pb2.HumidityControlSettingsTrait): humidity_control,
+        _trait_key(nest_hvac_pb2.FanControlCapabilitiesTrait): fan_capabilities,
+        _trait_key(nest_hvac_pb2.FanControlSettingsTrait): fan_settings,
+        _trait_key(nest_hvac_pb2.RemoteComfortSensingSettingsTrait): rcs,
+        # The observe stream stores labelled TemperatureTraits by label as well,
+        # so the room and backplate readings don't overwrite each other.
+        _trait_key(nest_sensor_pb2.TemperatureTrait): current_temperature,
+        "current_temperature": current_temperature,
+        "backplate_temperature": _temperature_trait(21.05),
+        _trait_key(nest_sensor_pb2.HumidityTrait): humidity,
+        _trait_key(nest_sensor_pb2.BatteryVoltageTrait): battery,
         _trait_key(weave_description_pb2.DeviceIdentityTrait): identity,
         _trait_key(weave_description_pb2.LabelSettingsTrait): label,
         _trait_key(weave_heartbeat_pb2.LivenessTrait): liveness,

@@ -3,6 +3,9 @@
 from typing import Any
 from unittest.mock import AsyncMock
 
+from custom_components.nest_legacy.pynest.protobuf_gen.nest.trait import (
+    hvac_pb2 as nest_hvac_pb2,
+)
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
@@ -20,6 +23,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from . import setup_integration
+from .const import HEAT_LINK_SERIAL, TEMP_SENSOR_KEY, THERMOSTAT_KEY
 
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -28,7 +32,7 @@ from pytest_homeassistant_custom_component.common import (
 
 PATHLIGHT_ENTITY = "switch.hallway_hallway_protect_pathlight"
 STREAMING_ENTITY = "switch.front_door_front_door_doorbell_streaming"
-SENSOR_ENTITY = "switch.bedroom_bedroom_sensor_control_thermostat"
+SENSOR_ENTITY = "switch.hallway_hallway_study_sensor_control_thermostat"
 HOME_AWAY_ASSIST_ENTITY = "switch.hallway_hallway_heat_link_home_away_assist"
 
 
@@ -74,14 +78,17 @@ async def test_toggle(
     ("service", "expected"),
     [(SERVICE_TURN_ON, True), (SERVICE_TURN_OFF, False)],
 )
+@pytest.mark.usefixtures("heat_link")
 async def test_hot_water_home_away_assist(
     hass: HomeAssistant,
-    init_integration: MockConfigEntry,
+    mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
     service: str,
     expected: bool,
 ) -> None:
     """The Home/Away Assist setting is its own switch now; see issue #68."""
+    await setup_integration(hass, mock_config_entry)
+
     assert hass.states.get(HOME_AWAY_ASSIST_ENTITY).state == STATE_ON
 
     await hass.services.async_call(
@@ -89,7 +96,7 @@ async def test_hot_water_home_away_assist(
     )
 
     device, data = mock_nest_client.async_set_device_data.call_args[0]
-    assert device.serial_number == "09AA00AA00AA0AAB"
+    assert device.serial_number == HEAT_LINK_SERIAL
     assert data == {"hot_water_away_enabled": expected}
 
 
@@ -105,12 +112,14 @@ async def test_remote_sensor_control(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    observe_data: dict[str, dict[str, Any]],
 ) -> None:
     """A remote sensor can be made the active one; see issues #19 and #20."""
-    app_launch_data["rcs_settings.09AA00AA00AA0AAA"]["active_rcs_sensors"] = [
-        "kryptonite.18B430CCCCCC0001"
+    rcs = observe_data[THERMOSTAT_KEY][
+        nest_hvac_pb2.RemoteComfortSensingSettingsTrait.DESCRIPTOR.full_name
     ]
+    rcs.activeRcsSelection.rcsSourceType = nest_hvac_pb2.RemoteComfortSensingSettingsTrait.RcsSourceType.RCS_SOURCE_TYPE_SINGLE_SENSOR
+    rcs.activeRcsSelection.activeRcsSensor.resourceId = TEMP_SENSOR_KEY
     await setup_integration(hass, mock_config_entry)
 
     assert hass.states.get(SENSOR_ENTITY).state == STATE_ON

@@ -1,10 +1,12 @@
 """Tests for the command paths of the pynest client."""
 
 from http import HTTPStatus
+import time
 from typing import Any
 from unittest.mock import patch
 
 from custom_components.nest_legacy.pynest.client import NestClient
+from custom_components.nest_legacy.pynest.enums import ThermostatHvacMode
 from custom_components.nest_legacy.pynest.exceptions import (
     AuthenticationFailedException,
     NonRetryablePynestException,
@@ -13,19 +15,25 @@ from custom_components.nest_legacy.pynest.exceptions import (
 )
 from custom_components.nest_legacy.pynest.models import (
     NestCamera,
+    NestHeatLink,
     NestLock,
     NestProtect,
+    NestTempSensor,
     NestThermostat,
 )
 from custom_components.nest_legacy.pynest.protobuf_gen.nest.trait import (
     history_pb2 as nest_history_pb2,
+    hvac_pb2 as nest_hvac_pb2,
 )
 from custom_components.nest_legacy.pynest.protobuf_gen.nestlabs.gateway import v1_pb2
+from google.protobuf import any_pb2
+from google.protobuf.message import Message
 import pytest
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from ..const import TEMP_SENSOR_KEY, THERMOSTAT_KEY
 from .test_client import SESSION_RESPONSE, SESSION_URL
 
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
@@ -34,6 +42,13 @@ PUT_URL = "https://transport.example.com/v6/put"
 SEND_COMMAND_URL = (
     "https://grpc-web.production.nest.com/nestlabs.gateway.v1.ResourceApi/SendCommand"
 )
+BATCH_UPDATE_URL = (
+    "https://grpc-web.production.nest.com"
+    "/nestlabs.gateway.v1.TraitBatchApi/BatchUpdateState"
+)
+
+_RCS = nest_hvac_pb2.RemoteComfortSensingSettingsTrait
+_SET_POINT_TYPE = nest_hvac_pb2.SetPointScheduleSettingsTrait.SetPointType
 
 
 @pytest.fixture(autouse=True)
@@ -54,12 +69,38 @@ async def client(
     return client
 
 
-def _thermostat() -> NestThermostat:
-    """Return a REST thermostat."""
+def _thermostat(*, is_eco_mode: bool = False) -> NestThermostat:
+    """Return a protobuf thermostat heating to 20 C."""
     return NestThermostat(
-        object_key="device.09AA00AA00AA0AAA",
-        serial_number="09AA00AA00AA0AAA",
+        object_key=THERMOSTAT_KEY,
+        serial_number="18B430DDDDDD0002",
         name="Thermostat",
+        hvac_mode=ThermostatHvacMode.HEAT,
+        target_temperature=20.0,
+        is_eco_mode=is_eco_mode,
+        is_protobuf=True,
+    )
+
+
+def _temp_sensor() -> NestTempSensor:
+    """Return a protobuf temperature sensor associated with the thermostat."""
+    return NestTempSensor(
+        object_key=TEMP_SENSOR_KEY,
+        serial_number="18B430DDDDDD0005",
+        name="Sensor",
+        associated_thermostat_object_key=THERMOSTAT_KEY,
+        is_protobuf=True,
+    )
+
+
+def _heat_link() -> NestHeatLink:
+    """Return the Heat Link driven by the thermostat."""
+    return NestHeatLink(
+        object_key="heatlink.18B430DDDDDD0006",
+        serial_number="18B430DDDDDD0006",
+        name="Heat Link",
+        associated_thermostat_object_key=THERMOSTAT_KEY,
+        is_protobuf=True,
     )
 
 
@@ -93,55 +134,164 @@ def _protobuf_camera() -> NestCamera:
     )
 
 
-async def test_thermostat_write_splits_shared_and_device_buckets(
+def _mock_trait_updates(aioclient_mock: AiohttpClientMocker) -> None:
+    """Accept every trait update."""
+    aioclient_mock.post(
+        BATCH_UPDATE_URL,
+        content=v1_pb2.BatchUpdateStateResponse().SerializeToString(),
+    )
+
+
+def _trait_updates(
+    aioclient_mock: AiohttpClientMocker,
+) -> list[v1_pb2.TraitUpdateStateRequest]:
+    """Return every trait update sent, in order."""
+    return [
+        update
+        for _, url, data, _ in aioclient_mock.mock_calls
+        if str(url) == BATCH_UPDATE_URL
+        for update in v1_pb2.BatchUpdateStateRequest.FromString(
+            data
+        ).batchUpdateStateRequest
+    ]
+
+
+def _unpack[T: Message](state: any_pb2.Any, trait_class: type[T]) -> T:
+    """Return the trait packed into a trait update."""
+    trait = trait_class()
+    assert state.Unpack(trait)
+    return trait
+
+
+async def test_thermostat_setpoint_and_lock(
     client: NestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
-    """Setpoints go to the shared bucket and everything else to the device."""
-    aioclient_mock.post(PUT_URL, json={})
+    """Each thermostat setting is written to its own trait on the thermostat."""
+    _mock_trait_updates(aioclient_mock)
 
     await client.async_set_device_data(
         _thermostat(), {"target_temperature": 21.5, "temperature_lock": True}
     )
 
-    objects = aioclient_mock.mock_calls[-1][2]["objects"]
-    assert objects == [
-        {
-            "object_key": "shared.09AA00AA00AA0AAA",
-            "op": "MERGE",
-            "value": {"target_temperature": 21.5, "target_change_pending": True},
-        },
-        {
-            "object_key": "device.09AA00AA00AA0AAA",
-            "op": "MERGE",
-            "value": {"temperature_lock": True},
-        },
-    ]
+    target_update, lock_update = _trait_updates(aioclient_mock)
+    assert target_update.traitRequest.resourceId == THERMOSTAT_KEY
+    assert target_update.traitRequest.traitLabel == "target_temperature_settings"
+    target = _unpack(target_update.state, nest_hvac_pb2.TargetTemperatureSettingsTrait)
+    assert target.targetTemperature.setpointType == _SET_POINT_TYPE.SET_POINT_TYPE_HEAT
+    assert target.targetTemperature.heatingTarget.value == 21.5
+    assert lock_update.traitRequest.resourceId == THERMOSTAT_KEY
+    assert lock_update.traitRequest.traitLabel == "temperature_lock_settings"
+    assert _unpack(
+        lock_update.state, nest_hvac_pb2.TemperatureLockSettingsTrait
+    ).enabled
 
 
-async def test_hvac_mode_is_renamed_for_the_rest_api(
+async def test_hvac_mode_sets_the_setpoint_type(
     client: NestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
-    """The generic hvac_mode key becomes the legacy target_temperature_type."""
-    aioclient_mock.post(PUT_URL, json={})
+    """The HVAC mode is the setpoint type of the target temperature."""
+    _mock_trait_updates(aioclient_mock)
 
-    await client.async_set_device_data(_thermostat(), {"hvac_mode": "heat"})
+    await client.async_set_device_data(_thermostat(), {"hvac_mode": "range"})
 
-    objects = aioclient_mock.mock_calls[-1][2]["objects"]
-    assert objects[0]["value"]["target_temperature_type"] == "heat"
+    (update,) = _trait_updates(aioclient_mock)
+    target = _unpack(update.state, nest_hvac_pb2.TargetTemperatureSettingsTrait)
+    assert target.enabled.value
+    assert target.targetTemperature.setpointType == _SET_POINT_TYPE.SET_POINT_TYPE_RANGE
 
 
 async def test_exit_eco_is_sent_before_the_setpoint(
     client: NestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
-    """Leaving eco is expressed as the schedule eco mode; see issue #33."""
-    aioclient_mock.post(PUT_URL, json={})
+    """Eco is left before the new setpoint is applied; see issue #33."""
+    _mock_trait_updates(aioclient_mock)
 
     await client.async_set_device_data(
-        _thermostat(), {"exit_eco": True, "target_temperature": 21.0}
+        _thermostat(is_eco_mode=True), {"exit_eco": True, "target_temperature": 21.0}
     )
 
-    objects = aioclient_mock.mock_calls[-1][2]["objects"]
-    assert {"eco": {"mode": "schedule"}}.items() <= objects[1]["value"].items()
+    eco_update, target_update = _trait_updates(aioclient_mock)
+    assert eco_update.traitRequest.traitLabel == "eco_mode_state"
+    assert (
+        _unpack(eco_update.state, nest_hvac_pb2.EcoModeStateTrait).ecoMode
+        == nest_hvac_pb2.EcoModeStateTrait.EcoMode.ECO_MODE_INACTIVE
+    )
+    assert target_update.traitRequest.traitLabel == "target_temperature_settings"
+    target = _unpack(target_update.state, nest_hvac_pb2.TargetTemperatureSettingsTrait)
+    assert target.targetTemperature.heatingTarget.value == 21.0
+
+
+async def test_activating_a_sensor_keeps_the_other_rcs_settings(
+    client: NestClient, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The sensor is selected on the thermostat without losing its other settings."""
+    _mock_trait_updates(aioclient_mock)
+    rcs = _RCS(rcsControlMode=_RCS.RcsControlMode.RCS_CONTROL_MODE_SCHEDULE)
+    rcs.associatedRcsSensors.add().deviceId.resourceId = TEMP_SENSOR_KEY
+    rcs.activeRcsSelection.rcsSourceType = _RCS.RcsSourceType.RCS_SOURCE_TYPE_BACKPLATE
+
+    await client.async_set_device_data(
+        _temp_sensor(),
+        {"is_active_sensor": True},
+        current_traits={_RCS.DESCRIPTOR.full_name: rcs},
+    )
+
+    (update,) = _trait_updates(aioclient_mock)
+    assert update.traitRequest.resourceId == THERMOSTAT_KEY
+    assert update.traitRequest.traitLabel == "remote_comfort_sensing_settings"
+    sent = _unpack(update.state, _RCS)
+    assert (
+        sent.activeRcsSelection.rcsSourceType
+        == _RCS.RcsSourceType.RCS_SOURCE_TYPE_SINGLE_SENSOR
+    )
+    assert sent.activeRcsSelection.activeRcsSensor.resourceId == TEMP_SENSOR_KEY
+    assert sent.rcsControlMode == _RCS.RcsControlMode.RCS_CONTROL_MODE_SCHEDULE
+    assert [s.deviceId.resourceId for s in sent.associatedRcsSensors] == [
+        TEMP_SENSOR_KEY
+    ]
+
+
+async def test_deactivating_an_inactive_sensor_sends_nothing(
+    client: NestClient, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Turning off a sensor the thermostat isn't using changes nothing."""
+    _mock_trait_updates(aioclient_mock)
+    rcs = _RCS()
+    rcs.activeRcsSelection.rcsSourceType = _RCS.RcsSourceType.RCS_SOURCE_TYPE_BACKPLATE
+
+    await client.async_set_device_data(
+        _temp_sensor(),
+        {"is_active_sensor": False},
+        current_traits={_RCS.DESCRIPTOR.full_name: rcs},
+    )
+
+    assert not _trait_updates(aioclient_mock)
+
+
+async def test_heat_link_boost(
+    client: NestClient, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A boost sets the hot water settings on the thermostat it hangs off."""
+    _mock_trait_updates(aioclient_mock)
+
+    await client.async_set_device_data(
+        _heat_link(),
+        {
+            "hot_water_mode": "schedule",
+            "hot_water_boost": True,
+            "hot_water_boost_duration": 3600,
+        },
+    )
+
+    (update,) = _trait_updates(aioclient_mock)
+    assert update.traitRequest.resourceId == THERMOSTAT_KEY
+    assert update.traitRequest.traitLabel == "hot_water_settings"
+    settings = _unpack(update.state, nest_hvac_pb2.HotWaterSettingsTrait)
+    assert (
+        settings.mode
+        == nest_hvac_pb2.HotWaterSettingsTrait.HotWaterMode.HOT_WATER_MODE_SCHEDULE
+    )
+    assert settings.boostTimerEnd.seconds == pytest.approx(time.time() + 3600, abs=5)
 
 
 async def test_generic_device_write(

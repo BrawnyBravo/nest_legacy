@@ -1,56 +1,4 @@
 # serializer version: 1
-# name: test_entities[switch.bedroom_bedroom_sensor_control_thermostat-entry]
-  EntityRegistryEntrySnapshot({
-    'aliases': list([
-      None,
-    ]),
-    'area_id': None,
-    'capabilities': None,
-    'config_entry_id': <ANY>,
-    'config_subentry_id': <ANY>,
-    'device_class': None,
-    'device_id': <ANY>,
-    'disabled_by': None,
-    'domain': 'switch',
-    'entity_category': <EntityCategory.CONFIG: 'config'>,
-    'entity_id': 'switch.bedroom_bedroom_sensor_control_thermostat',
-    'has_entity_name': True,
-    'hidden_by': None,
-    'icon': None,
-    'id': <ANY>,
-    'labels': set({
-    }),
-    'name': None,
-    'object_id_base': 'Control thermostat',
-    'options': dict({
-    }),
-    'original_device_class': None,
-    'original_icon': 'mdi:thermometer-check',
-    'original_name': 'Control thermostat',
-    'platform': 'nest_legacy',
-    'previous_unique_id': None,
-    'suggested_object_id': None,
-    'supported_features': 0,
-    'translation_key': 'active_sensor',
-    'unique_id': '18B430CCCCCC0001-is_active_sensor',
-    'unit_of_measurement': None,
-  })
-# ---
-# name: test_entities[switch.bedroom_bedroom_sensor_control_thermostat-state]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.ATTRIBUTION: 'attribution'>: 'Data provided by Google/Nest',
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Bedroom Sensor Control thermostat',
-      <EntityStateAttribute.ICON: 'icon'>: 'mdi:thermometer-check',
-    }),
-    'context': <ANY>,
-    'entity_id': 'switch.bedroom_bedroom_sensor_control_thermostat',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': 'off',
-  })
-# ---
 # name: test_entities[switch.front_door_front_door_auto_relock-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -571,58 +519,6 @@
     'state': 'on',
   })
 # ---
-# name: test_entities[switch.hallway_hallway_heat_link_home_away_assist-entry]
-  EntityRegistryEntrySnapshot({
-    'aliases': list([
-      None,
-    ]),
-    'area_id': None,
-    'capabilities': None,
-    'config_entry_id': <ANY>,
-    'config_subentry_id': <ANY>,
-    'device_class': None,
-    'device_id': <ANY>,
-    'disabled_by': None,
-    'domain': 'switch',
-    'entity_category': <EntityCategory.CONFIG: 'config'>,
-    'entity_id': 'switch.hallway_hallway_heat_link_home_away_assist',
-    'has_entity_name': True,
-    'hidden_by': None,
-    'icon': None,
-    'id': <ANY>,
-    'labels': set({
-    }),
-    'name': None,
-    'object_id_base': 'Home/Away Assist',
-    'options': dict({
-    }),
-    'original_device_class': None,
-    'original_icon': 'mdi:home-export-outline',
-    'original_name': 'Home/Away Assist',
-    'platform': 'nest_legacy',
-    'previous_unique_id': None,
-    'suggested_object_id': None,
-    'supported_features': 0,
-    'translation_key': 'home_away_assist',
-    'unique_id': '09AA00AA00AA0AAB-hot_water_away_enabled',
-    'unit_of_measurement': None,
-  })
-# ---
-# name: test_entities[switch.hallway_hallway_heat_link_home_away_assist-state]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.ATTRIBUTION: 'attribution'>: 'Data provided by Google/Nest',
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Hallway Heat Link Home/Away Assist',
-      <EntityStateAttribute.ICON: 'icon'>: 'mdi:home-export-outline',
-    }),
-    'context': <ANY>,
-    'entity_id': 'switch.hallway_hallway_heat_link_home_away_assist',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': 'on',
-  })
-# ---
 # name: test_entities[switch.hallway_hallway_landing_heads_up-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
@@ -1039,7 +935,7 @@
     'state': 'on',
   })
 # ---
-# name: test_entities[switch.hallway_hallway_thermostat_humidifier-entry]
+# name: test_entities[switch.hallway_hallway_study_sensor_control_thermostat-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
       None,
@@ -1053,7 +949,59 @@
     'disabled_by': None,
     'domain': 'switch',
     'entity_category': <EntityCategory.CONFIG: 'config'>,
-    'entity_id': 'switch.hallway_hallway_thermostat_humidifier',
+    'entity_id': 'switch.hallway_hallway_study_sensor_control_thermostat',
+    'has_entity_name': True,
+    'hidden_by': None,
+    'icon': None,
+    'id': <ANY>,
+    'labels': set({
+    }),
+    'name': None,
+    'object_id_base': 'Control thermostat',
+    'options': dict({
+    }),
+    'original_device_class': None,
+    'original_icon': 'mdi:thermometer-check',
+    'original_name': 'Control thermostat',
+    'platform': 'nest_legacy',
+    'previous_unique_id': None,
+    'suggested_object_id': None,
+    'supported_features': 0,
+    'translation_key': 'active_sensor',
+    'unique_id': '18B430DDDDDD0005-is_active_sensor',
+    'unit_of_measurement': None,
+  })
+# ---
+# name: test_entities[switch.hallway_hallway_study_sensor_control_thermostat-state]
+  StateSnapshot({
+    'attributes': ReadOnlyDict({
+      <EntityStateAttribute.ATTRIBUTION: 'attribution'>: 'Data provided by Google/Nest',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Hallway Study Sensor Control thermostat',
+      <EntityStateAttribute.ICON: 'icon'>: 'mdi:thermometer-check',
+    }),
+    'context': <ANY>,
+    'entity_id': 'switch.hallway_hallway_study_sensor_control_thermostat',
+    'last_changed': <ANY>,
+    'last_reported': <ANY>,
+    'last_updated': <ANY>,
+    'state': 'off',
+  })
+# ---
+# name: test_entities[switch.hallway_hallway_upstairs_humidifier-entry]
+  EntityRegistryEntrySnapshot({
+    'aliases': list([
+      None,
+    ]),
+    'area_id': None,
+    'capabilities': None,
+    'config_entry_id': <ANY>,
+    'config_subentry_id': <ANY>,
+    'device_class': None,
+    'device_id': <ANY>,
+    'disabled_by': None,
+    'domain': 'switch',
+    'entity_category': <EntityCategory.CONFIG: 'config'>,
+    'entity_id': 'switch.hallway_hallway_upstairs_humidifier',
     'has_entity_name': True,
     'hidden_by': None,
     'icon': None,
@@ -1072,71 +1020,19 @@
     'suggested_object_id': None,
     'supported_features': 0,
     'translation_key': 'humidifier',
-    'unique_id': '09AA00AA00AA0AAA-humidifier_state',
+    'unique_id': '18B430DDDDDD0002-humidifier_state',
     'unit_of_measurement': None,
   })
 # ---
-# name: test_entities[switch.hallway_hallway_thermostat_humidifier-state]
+# name: test_entities[switch.hallway_hallway_upstairs_humidifier-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
       <EntityStateAttribute.ATTRIBUTION: 'attribution'>: 'Data provided by Google/Nest',
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Hallway Thermostat Humidifier',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Hallway Upstairs Humidifier',
       <EntityStateAttribute.ICON: 'icon'>: 'mdi:water-plus',
     }),
     'context': <ANY>,
-    'entity_id': 'switch.hallway_hallway_thermostat_humidifier',
-    'last_changed': <ANY>,
-    'last_reported': <ANY>,
-    'last_updated': <ANY>,
-    'state': 'off',
-  })
-# ---
-# name: test_entities[switch.hallway_hallway_thermostat_temperature_lock-entry]
-  EntityRegistryEntrySnapshot({
-    'aliases': list([
-      None,
-    ]),
-    'area_id': None,
-    'capabilities': None,
-    'config_entry_id': <ANY>,
-    'config_subentry_id': <ANY>,
-    'device_class': None,
-    'device_id': <ANY>,
-    'disabled_by': None,
-    'domain': 'switch',
-    'entity_category': <EntityCategory.CONFIG: 'config'>,
-    'entity_id': 'switch.hallway_hallway_thermostat_temperature_lock',
-    'has_entity_name': True,
-    'hidden_by': None,
-    'icon': None,
-    'id': <ANY>,
-    'labels': set({
-    }),
-    'name': None,
-    'object_id_base': 'Temperature lock',
-    'options': dict({
-    }),
-    'original_device_class': None,
-    'original_icon': 'mdi:lock',
-    'original_name': 'Temperature lock',
-    'platform': 'nest_legacy',
-    'previous_unique_id': None,
-    'suggested_object_id': None,
-    'supported_features': 0,
-    'translation_key': 'temperature_lock',
-    'unique_id': '09AA00AA00AA0AAA-temperature_lock',
-    'unit_of_measurement': None,
-  })
-# ---
-# name: test_entities[switch.hallway_hallway_thermostat_temperature_lock-state]
-  StateSnapshot({
-    'attributes': ReadOnlyDict({
-      <EntityStateAttribute.ATTRIBUTION: 'attribution'>: 'Data provided by Google/Nest',
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Hallway Thermostat Temperature lock',
-      <EntityStateAttribute.ICON: 'icon'>: 'mdi:lock',
-    }),
-    'context': <ANY>,
-    'entity_id': 'switch.hallway_hallway_thermostat_temperature_lock',
+    'entity_id': 'switch.hallway_hallway_upstairs_humidifier',
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,

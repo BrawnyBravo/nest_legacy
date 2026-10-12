@@ -297,25 +297,14 @@ def _app_launch_buckets() -> dict[str, Any]:
     }
 
 
-@pytest.mark.parametrize(
-    ("enable_protobuf_thermostat", "expected_keys"),
-    [
-        # The protobuf stream owns the thermostat, so its REST buckets are dropped.
-        (True, {"topaz.09AA00AA00AA0AA1"}),
-        (False, {"device.09AA00AA00AA0AAA", "topaz.09AA00AA00AA0AA1"}),
-    ],
-)
 async def test_get_first_data(
-    hass: HomeAssistant,
-    aioclient_mock: AiohttpClientMocker,
-    enable_protobuf_thermostat: bool,
-    expected_keys: set[str],
+    client: NestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
-    """App launch buckets are keyed by object key and filtered by the options."""
-    client = NestClient(
-        async_get_clientsession(hass),
-        enable_protobuf_thermostat=enable_protobuf_thermostat,
-    )
+    """App launch buckets are keyed by object key.
+
+    The protobuf stream owns the thermostat, so its REST buckets are neither
+    requested nor kept if the server sends them anyway.
+    """
     aioclient_mock.get(SESSION_URL, json=SESSION_RESPONSE)
     await client._async_get_session("test-token")
 
@@ -326,7 +315,19 @@ async def test_get_first_data(
 
     data = await client.async_get_first_data()
 
-    assert set(data) == expected_keys
+    assert set(data) == {"topaz.09AA00AA00AA0AA1"}
+    requested = aioclient_mock.mock_calls[-1][2]["known_bucket_types"]
+    assert "topaz" in requested
+    assert not {
+        "device",
+        "shared",
+        "kryptonite",
+        "link",
+        "track",
+        "rcs_settings",
+        "demand_response",
+        "tuneups",
+    } & set(requested)
 
 
 async def test_get_first_data_error(
