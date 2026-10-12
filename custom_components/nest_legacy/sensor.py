@@ -12,10 +12,10 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import (
-    CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
     EntityCategory,
     UnitOfElectricPotential,
+    UnitOfRatio,
     UnitOfTemperature,
     UnitOfTime,
 )
@@ -129,7 +129,7 @@ _DESCRIPTIONS: tuple[NestSensorEntityDescription, ...] = (
         translation_key="co_previous_peak",
         value_fn=lambda device: device.co_previous_peak,
         device_class=SensorDeviceClass.CO,
-        native_unit_of_measurement=CONCENTRATION_PARTS_PER_MILLION,
+        native_unit_of_measurement=UnitOfRatio.PARTS_PER_MILLION,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         device_types=(NestProtect,),
