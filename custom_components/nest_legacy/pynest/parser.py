@@ -1,7 +1,7 @@
 """Data parsing for the Nest API."""
 
 from dataclasses import dataclass
-import datetime
+import datetime as dt
 import logging
 import time
 from typing import Any
@@ -414,7 +414,7 @@ class NestParser:
         online = raw_data.get(widget_key, {}).get("online", False)
         replace_by_ts = value.get("replace_by_date_utc_secs")
         replace_by_date = (
-            datetime.datetime.fromtimestamp(replace_by_ts, datetime.UTC).date()
+            dt.datetime.fromtimestamp(replace_by_ts, dt.UTC).date()
             if replace_by_ts
             else None
         )
@@ -1757,8 +1757,8 @@ class NestParser:
             nest_protect_pb2.LegacyProtectDeviceSettingsTrait.DESCRIPTOR.full_name
         )
         if settings and settings.HasField("replaceByDate"):
-            replace_by_date = datetime.datetime.fromtimestamp(
-                _safe_to_seconds(settings.replaceByDate), datetime.UTC
+            replace_by_date = dt.datetime.fromtimestamp(
+                _safe_to_seconds(settings.replaceByDate), dt.UTC
             ).date()
 
         legacy_info = traits.get(

@@ -2,7 +2,7 @@
 
 import asyncio
 import contextlib
-import datetime
+import datetime as dt
 from email.utils import parsedate_to_datetime
 import logging
 import time
@@ -444,11 +444,11 @@ def _is_expired_set_cookie(attributes: list[str]) -> bool:
         except ValueError:
             return False
         if expiry.tzinfo is None:
-            expiry = expiry.replace(tzinfo=datetime.UTC)
+            expiry = expiry.replace(tzinfo=dt.UTC)
         # pynest is kept free of homeassistant imports, so dt_util.utcnow()
         # is not available here.
         # pylint: disable-next=home-assistant-enforce-utcnow
-        return expiry <= datetime.datetime.now(datetime.UTC)
+        return expiry <= dt.datetime.now(dt.UTC)
     return False
 
 
