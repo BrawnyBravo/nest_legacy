@@ -96,9 +96,7 @@ _DESCRIPTIONS: tuple[NestSensorEntityDescription, ...] = (
         key="latest_manual_test_end_utc_secs",
         translation_key="last_manual_test",
         value_fn=lambda device: (
-            dt.datetime.fromtimestamp(
-                device.latest_manual_test_end_utc_secs, dt.UTC
-            )
+            dt.datetime.fromtimestamp(device.latest_manual_test_end_utc_secs, dt.UTC)
             if device.latest_manual_test_end_utc_secs > 0
             else None
         ),
@@ -111,9 +109,7 @@ _DESCRIPTIONS: tuple[NestSensorEntityDescription, ...] = (
         key="last_audio_self_test_end_utc_secs",
         translation_key="last_audio_self_test",
         value_fn=lambda device: (
-            dt.datetime.fromtimestamp(
-                device.last_audio_self_test_end_utc_secs, dt.UTC
-            )
+            dt.datetime.fromtimestamp(device.last_audio_self_test_end_utc_secs, dt.UTC)
             if device.last_audio_self_test_end_utc_secs > 0
             else None
         ),
