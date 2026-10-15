@@ -272,6 +272,17 @@ _LABEL_SPECIFIC_TRAITS: frozenset[str] = frozenset(
     }
 )
 
+
+def _is_non_live_trait_label(trait_label: str) -> bool:
+    """Return True for labels that never hold the device's current state.
+
+    "_bucketized" copies are history, and "unpaired_*" copies are the settings
+    the thermostat keeps for unpaired mode. The paired label is the live one, so
+    both are dropped rather than colliding with it on every poll.
+    """
+    return trait_label.endswith("_bucketized") or trait_label.startswith("unpaired_")
+
+
 _DUAL_FUEL_OVERRIDE_MAP: dict[
     DualFuelBreakpointOverride,
     nest_hvac_pb2.EquipmentSettingsTrait.DualFuelOverride.ValueType,
@@ -502,6 +513,9 @@ class NestClient:
         self._resource_types: dict[str, str] = {}
         self._legacy_protobuf_events_warned: bool = False
         self._protobuf_events_unauthorized: set[str] = set()
+        # Collisions do not change between polls, so each one is only reported
+        # once for the lifetime of the client.
+        self._trait_label_collisions_warned: set[tuple[str, str]] = set()
 
         self._enable_protobuf_structure = enable_protobuf_structure
         self._enable_protobuf_protect = enable_protobuf_protect
@@ -2626,7 +2640,7 @@ class NestClient:
                 [v2_pb2.StateType.Name(t) for t in state.stateTypes],
             )
 
-            if trait_label.endswith("_bucketized"):
+            if _is_non_live_trait_label(trait_label):
                 continue
 
             if resource_id not in updates:
@@ -2665,7 +2679,12 @@ class NestClient:
     def _check_trait_label_collisions(
         self, inner_response: v2_pb2.ObserveResponse.ObserveResponse
     ) -> None:
-        """Log warnings when multiple different labels are used for the same trait type."""
+        """Warn once per resource and trait type about labels used for it.
+
+        Only the values behind the first warning are dumped, at DEBUG level:
+        the collision itself does not change between polls, so repeating it
+        would flood the log.
+        """
         seen_labels: dict[str, dict[str, tuple[str, Any]]] = {}
         for state in inner_response.traitStates:
             type_url = state.patch.values.type_url
@@ -2673,7 +2692,7 @@ class NestClient:
             resource_id = state.traitId.resourceId
             trait_label = state.traitId.traitLabel
 
-            if trait_label.endswith("_bucketized"):
+            if _is_non_live_trait_label(trait_label):
                 continue
 
             if resource_id not in seen_labels:
@@ -2682,29 +2701,36 @@ class NestClient:
             existing = seen_labels[resource_id].get(descriptor_full_name)
             if existing:
                 prev_label, prev_state = existing
+                collision = (resource_id, descriptor_full_name)
                 if (
                     prev_label != trait_label
                     and prev_label not in _LABEL_SPECIFIC_TRAITS
                     and trait_label not in _LABEL_SPECIFIC_TRAITS
+                    and collision not in self._trait_label_collisions_warned
                 ):
-                    # Collision! Unpack both to log full details.
+                    self._trait_label_collisions_warned.add(collision)
+                    _LOGGER.warning(
+                        "Multiple traits of type %s on %s "
+                        "with different labels "
+                        "('%s' and '%s'), only one will "
+                        "be used. Consider adding labels "
+                        "to _LABEL_SPECIFIC_TRAITS",
+                        descriptor_full_name,
+                        resource_id,
+                        prev_label,
+                        trait_label,
+                    )
+                    # Unpack both to report the values, once, below the
+                    # warning level.
                     target_class = _TRAIT_TYPE_TO_CLASS_MAP.get(descriptor_full_name)
                     if target_class:
                         msg1, msg2 = target_class(), target_class()
                         prev_state.patch.values.Unpack(msg1)
                         state.patch.values.Unpack(msg2)
-                        _LOGGER.warning(
-                            "Multiple traits of type %s on %s "
-                            "with different labels "
-                            "('%s' and '%s'), only one will "
-                            "be used. Consider adding labels "
-                            "to _LABEL_SPECIFIC_TRAITS.\n"
-                            "Value 1 (%s): %s\n"
-                            "Value 2 (%s): %s",
+                        _LOGGER.debug(
+                            "Colliding traits of type %s on %s: %s=%s, %s=%s",
                             descriptor_full_name,
                             resource_id,
-                            prev_label,
-                            trait_label,
                             prev_label,
                             msg1,
                             trait_label,
