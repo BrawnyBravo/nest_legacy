@@ -3,6 +3,9 @@
 from typing import Any
 from unittest.mock import AsyncMock
 
+from custom_components.nest_legacy.pynest.protobuf_gen.nest.trait import (
+    occupancy_pb2 as nest_occupancy_pb2,
+)
 from custom_components.nest_legacy.pynest.protobuf_gen.weave.trait import (
     security_pb2 as weave_security_pb2,
 )
@@ -14,7 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from . import setup_integration
-from .const import LOCK_KEY
+from .const import LOCK_KEY, STRUCTURE_KEY
 
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -23,7 +26,7 @@ from pytest_homeassistant_custom_component.common import (
 
 SMOKE_ENTITY = "binary_sensor.hallway_hallway_protect_smoke"
 CO_ENTITY = "binary_sensor.hallway_hallway_protect_carbon_monoxide"
-OCCUPANCY_ENTITY = "binary_sensor.hallway_hallway_thermostat_occupancy"
+OCCUPANCY_ENTITY = "binary_sensor.hallway_hallway_upstairs_occupancy"
 TAMPER_ENTITY = "binary_sensor.front_door_front_door_tamper"
 _TAMPER_KEY = weave_security_pb2.TamperTrait.DESCRIPTOR.full_name
 
@@ -79,11 +82,15 @@ async def test_occupancy_follows_the_structure(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    observe_data: dict[str, dict[str, Any]],
 ) -> None:
-    """Occupancy is the inverse of the structure's away flag."""
-    assert_entry = app_launch_data["structure.00000000-0000-0000-0000-000000000001"]
-    assert_entry["away"] = True
+    """Occupancy follows the home's mode."""
+    mode = observe_data[STRUCTURE_KEY][
+        nest_occupancy_pb2.StructureModeTrait.DESCRIPTOR.full_name
+    ]
+    mode.structureMode = (
+        nest_occupancy_pb2.StructureModeTrait.StructureMode.STRUCTURE_MODE_AWAY
+    )
     await setup_integration(hass, mock_config_entry)
 
     assert hass.states.get(OCCUPANCY_ENTITY).state == STATE_OFF

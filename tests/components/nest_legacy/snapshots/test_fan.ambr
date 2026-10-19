@@ -1,5 +1,5 @@
 # serializer version: 1
-# name: test_entities[fan.hallway_hallway_thermostat_fan-entry]
+# name: test_entities[fan.hallway_hallway_upstairs_fan-entry]
   EntityRegistryEntrySnapshot({
     'aliases': list([
       None,
@@ -15,7 +15,7 @@
     'disabled_by': None,
     'domain': 'fan',
     'entity_category': None,
-    'entity_id': 'fan.hallway_hallway_thermostat_fan',
+    'entity_id': 'fan.hallway_hallway_upstairs_fan',
     'has_entity_name': True,
     'hidden_by': None,
     'icon': None,
@@ -34,15 +34,15 @@
     'suggested_object_id': None,
     'supported_features': <FanEntityFeature: 49>,
     'translation_key': 'fan',
-    'unique_id': '09AA00AA00AA0AAA-fan',
+    'unique_id': '18B430DDDDDD0002-fan',
     'unit_of_measurement': None,
   })
 # ---
-# name: test_entities[fan.hallway_hallway_thermostat_fan-state]
+# name: test_entities[fan.hallway_hallway_upstairs_fan-state]
   StateSnapshot({
     'attributes': ReadOnlyDict({
       <EntityStateAttribute.ATTRIBUTION: 'attribution'>: 'Data provided by Google/Nest',
-      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Hallway Thermostat Fan',
+      <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Hallway Upstairs Fan',
       <FanEntityStateAttribute.PERCENTAGE: 'percentage'>: 0,
       <FanEntityStateAttribute.PERCENTAGE_STEP: 'percentage_step'>: 100.0,
       <FanEntityStateAttribute.PRESET_MODE: 'preset_mode'>: None,
@@ -50,7 +50,7 @@
       <EntityStateAttribute.SUPPORTED_FEATURES: 'supported_features'>: <FanEntityFeature: 49>,
     }),
     'context': <ANY>,
-    'entity_id': 'fan.hallway_hallway_thermostat_fan',
+    'entity_id': 'fan.hallway_hallway_upstairs_fan',
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,

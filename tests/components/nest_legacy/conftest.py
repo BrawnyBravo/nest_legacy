@@ -24,7 +24,7 @@ from homeassistant.const import CONF_ACCESS_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 
 from . import async_load_fixture_json, setup_integration
-from .const import protobuf_updates
+from .const import THERMOSTAT_KEY, hot_water_traits, protobuf_updates
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.syrupy import HomeAssistantSnapshotExtension
@@ -82,6 +82,18 @@ async def app_launch_data(hass: HomeAssistant) -> dict[str, Any]:
 def observe_data() -> dict[str, dict[str, Any]]:
     """Return the protobuf traits returned by the observe stream."""
     return protobuf_updates()
+
+
+@pytest.fixture
+def heat_link(observe_data: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Give the thermostat a Heat Link and return the traits that add it.
+
+    Hot water is a European build, so tests opt into it rather than every
+    thermostat carrying a Heat Link.
+    """
+    traits = hot_water_traits()
+    observe_data[THERMOSTAT_KEY].update(traits)
+    return traits
 
 
 @pytest.fixture

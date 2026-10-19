@@ -1,6 +1,6 @@
 """Water heater platform for Nest Heat Link."""
 
-import datetime
+import datetime as dt
 from typing import Any, override
 
 from homeassistant.components.water_heater import (
@@ -130,12 +130,12 @@ class NestHeatLinkWaterHeater(NestEntity[NestHeatLink], WaterHeaterEntity):
             "away_active": self.device.hot_water_away_active,
         }
         if self.device.hot_water_next_transition_time > 0:
-            attrs["next_transition_time"] = datetime.datetime.fromtimestamp(
-                self.device.hot_water_next_transition_time, datetime.UTC
+            attrs["next_transition_time"] = dt.datetime.fromtimestamp(
+                self.device.hot_water_next_transition_time, dt.UTC
             )
         if self.device.hot_water_boost_time_to_end > 0:
-            attrs["boost_timer_end"] = datetime.datetime.fromtimestamp(
-                self.device.hot_water_boost_time_to_end, datetime.UTC
+            attrs["boost_timer_end"] = dt.datetime.fromtimestamp(
+                self.device.hot_water_boost_time_to_end, dt.UTC
             )
         return attrs
 

@@ -31,7 +31,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
 from . import setup_integration
-from .const import THERMOSTAT_KEY, hot_water_traits
+from .const import HEAT_LINK_SERIAL, THERMOSTAT_KEY
 
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -39,7 +39,6 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 ENTITY_ID = "water_heater.hallway_hallway_heat_link"
-THERMOSTAT = "09AA00AA00AA0AAA"
 
 
 @pytest.fixture
@@ -48,17 +47,9 @@ def platforms() -> list[Platform]:
     return [Platform.WATER_HEATER]
 
 
-@pytest.fixture
-def protobuf_heat_link(
-    app_launch_data: dict[str, Any], observe_data: dict[str, dict[str, Any]]
-) -> dict[str, Any]:
-    """Move hot water onto the protobuf pathway, the one Heat Links run on."""
-    device = app_launch_data[f"device.{THERMOSTAT}"]
-    device["has_hot_water_control"] = False
-    device["has_hot_water_temperature"] = False
-    traits = hot_water_traits()
-    observe_data[THERMOSTAT_KEY].update(traits)
-    return traits
+@pytest.fixture(autouse=True)
+def auto_heat_link(heat_link: dict[str, Any]) -> None:
+    """Give every thermostat here a Heat Link."""
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -86,7 +77,7 @@ async def test_set_temperature(
     )
 
     device, data = mock_nest_client.async_set_device_data.call_args[0]
-    assert device.serial_number == "09AA00AA00AA0AAB"
+    assert device.serial_number == HEAT_LINK_SERIAL
     assert data == {"hot_water_temperature": 60}
 
 
@@ -143,7 +134,6 @@ async def test_boost_keeps_the_schedule(
     }
 
 
-@pytest.mark.usefixtures("protobuf_heat_link")
 async def test_away_mode_is_not_offered(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
@@ -170,7 +160,6 @@ async def test_away_mode_is_not_offered(
         )
 
 
-@pytest.mark.usefixtures("protobuf_heat_link")
 async def test_next_transition_time(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
@@ -191,10 +180,10 @@ async def test_no_temperature_without_a_sensor(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    protobuf_heat_link: dict[str, Any],
+    heat_link: dict[str, Any],
 ) -> None:
     """A Heat Link with no sensor reports no temperature at all; see issue #69."""
-    capabilities = protobuf_heat_link[
+    capabilities = heat_link[
         nest_hvac_pb2.HvacEquipmentCapabilitiesTrait.DESCRIPTOR.full_name
     ]
     capabilities.hasHotWaterTemperature = False
@@ -210,12 +199,12 @@ async def test_no_entity_without_hot_water(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    observe_data: dict[str, dict[str, Any]],
+    heat_link: dict[str, Any],
 ) -> None:
     """A thermostat with no heat link produces no water heater."""
-    device = app_launch_data[f"device.{THERMOSTAT}"]
-    device["has_hot_water_control"] = False
-    device["has_hot_water_temperature"] = False
+    for key in heat_link:
+        del observe_data[THERMOSTAT_KEY][key]
     await setup_integration(hass, mock_config_entry)
 
     assert hass.states.get(ENTITY_ID) is None
@@ -225,7 +214,7 @@ async def test_heat_link_without_capability_flags(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    protobuf_heat_link: dict[str, Any],
+    heat_link: dict[str, Any],
 ) -> None:
     """The hot water traits alone prove control when the capabilities omit it.
 
@@ -233,7 +222,7 @@ async def test_heat_link_without_capability_flags(
     ever setting the hot water flags, while the thermostat does publish
     HotWaterTrait and HotWaterSettingsTrait.
     """
-    capabilities = protobuf_heat_link[
+    capabilities = heat_link[
         nest_hvac_pb2.HvacEquipmentCapabilitiesTrait.DESCRIPTOR.full_name
     ]
     capabilities.hasHotWaterControl = False
@@ -251,11 +240,11 @@ async def test_no_entity_for_central_heating_only(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    protobuf_heat_link: dict[str, Any],
+    heat_link: dict[str, Any],
     observe_data: dict[str, dict[str, Any]],
 ) -> None:
     """A Heat Link wired for central heating only produces no water heater."""
-    capabilities = protobuf_heat_link[
+    capabilities = heat_link[
         nest_hvac_pb2.HvacEquipmentCapabilitiesTrait.DESCRIPTOR.full_name
     ]
     capabilities.hasHotWaterControl = False

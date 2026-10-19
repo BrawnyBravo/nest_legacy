@@ -328,10 +328,37 @@ def _redact_identifiers(data: Any, identifiers: list[str]) -> Any:
     return walk(data)
 
 
+def _processed_data(coordinator: NestCoordinator) -> dict[str, Any]:
+    """Return the coordinator's parsed devices and structures as dicts."""
+    return {
+        key: dataclasses.asdict(value)
+        for key, value in coordinator.data.items()
+        if value
+    }
+
+
+def _raw_api_data(coordinator: NestCoordinator) -> Any:
+    """Return the raw REST buckets and protobuf resources as dicts."""
+    return _convert_protobuf_to_dict(coordinator.get_raw_data_for_diagnostics())
+
+
 def _redact(data: dict[str, Any], coordinator: NestCoordinator) -> dict[str, Any]:
-    """Redact sensitive keys, then identifiers, addresses and links."""
+    """Redact sensitive keys, then identifiers, addresses and links.
+
+    Identifiers are collected from all of the coordinator's data, not only the
+    part being downloaded, so a device download uses the same placeholders as
+    a config entry download taken at the same time.
+    """
     redacted = async_redact_data(data, TO_REDACT)
-    return _redact_identifiers(redacted, _collect_identifiers(coordinator, redacted))
+    everything = async_redact_data(
+        {
+            "processed_data": _processed_data(coordinator),
+            "raw_api_data": _raw_api_data(coordinator),
+        },
+        TO_REDACT,
+    )
+    identifiers = _collect_identifiers(coordinator, [redacted, everything])
+    return _redact_identifiers(redacted, identifiers)
 
 
 async def async_get_config_entry_diagnostics(
@@ -347,18 +374,10 @@ async def async_get_config_entry_diagnostics(
     except (ClientError, TimeoutError, PynestException, HomeAssistantError) as e:
         return {"error": f"Authentication failed during diagnostics: {e}"}
 
-    processed_data = {
-        key: dataclasses.asdict(value)
-        for key, value in coordinator.data.items()
-        if value
-    }
-
-    raw_api_data = _convert_protobuf_to_dict(coordinator.get_raw_data_for_diagnostics())
-
     data: dict[str, Any] = {
         "config_entry": entry.as_dict(),
-        "processed_data": processed_data,
-        "raw_api_data": raw_api_data,
+        "processed_data": _processed_data(coordinator),
+        "raw_api_data": _raw_api_data(coordinator),
     }
 
     return _redact(data, coordinator)

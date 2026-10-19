@@ -16,6 +16,8 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
+from .const import THERMOSTAT_SERIAL
+
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.diagnostics import (
     get_diagnostics_for_config_entry,
@@ -267,31 +269,33 @@ async def test_diagnostics_cross_references(
     processed = diagnostics["processed_data"]
     raw = diagnostics["raw_api_data"]
 
-    # The REST thermostat, and the heat link that points back at it.
-    thermostat = next(
-        key
-        for key, value in processed.items()
-        if value["object_key"] == f"device.{key}"
-    )
-    assert processed[thermostat]["serial_number"] == thermostat
-    assert raw[f"device.{thermostat}"]["serial_number"] == thermostat
-    heat_link = next(
+    # A device's serial, its resource key, and the thermostat that lists a
+    # temperature sensor among its remote comfort sensors.
+    sensor = next(
         value
         for value in processed.values()
-        if value["object_key"].startswith("heatlink.")
+        if value.get("associated_thermostat_object_key")
     )
-    assert heat_link["associated_thermostat_object_key"] == f"device.{thermostat}"
-    assert (
-        raw[f"device.{thermostat}"]["heat_link_serial_number"]
-        == (heat_link["serial_number"])
+    thermostat_key = sensor["associated_thermostat_object_key"]
+    assert thermostat_key.startswith("DEVICE_**REDACTED_")
+    thermostat = next(
+        value for value in processed.values() if value["object_key"] == thermostat_key
     )
+    identity = raw[thermostat_key]["weave.trait.description.DeviceIdentityTrait"]
+    assert identity["serialNumber"] == thermostat["serial_number"]
+    assert processed[thermostat["serial_number"]] == thermostat
+    rcs = raw[thermostat_key]["nest.trait.hvac.RemoteComfortSensingSettingsTrait"]
+    assert [
+        item["deviceId"]["resourceId"] for item in rcs["associatedRcsSensors"]
+    ] == [sensor["object_key"]]
 
     # The camera's home is the REST structure the protobuf structure links to.
     camera = next(value for key, value in raw.items() if key.startswith("quartz."))
     structure = camera["structure_id"]
     assert structure.startswith("**REDACTED_")
     assert f"structure.{structure}" in raw
-    assert raw[f"link.{thermostat}"]["structure"] == f"structure.{structure}"
+    assert f"where.{structure}" in raw
+    assert processed[structure]["serial_number"] == structure
     protobuf_structure = next(
         value for key, value in raw.items() if key.startswith("STRUCTURE_")
     )
@@ -302,7 +306,8 @@ async def test_diagnostics_cross_references(
     # protobuf devices match the structure's annotations.
     rest_rooms = {where["where_id"] for where in raw[f"where.{structure}"]["wheres"]}
     assert camera["where_id"] in rest_rooms
-    assert raw[f"device.{thermostat}"]["where_id"] in rest_rooms
+    protect = next(value for key, value in raw.items() if key.startswith("topaz."))
+    assert protect["where_id"] in rest_rooms
     annotations = protobuf_structure["nest.trait.located.LocatedAnnotationsTrait"]
     protobuf_rooms = {
         where["whereId"]["resourceId"]
@@ -328,7 +333,7 @@ async def test_device_diagnostics(
 ) -> None:
     """The per device diagnostics include the device's own raw data."""
     device = device_registry.async_get_device_by_identifier(
-        (DOMAIN, "09AA00AA00AA0AAA"), init_integration.entry_id
+        (DOMAIN, THERMOSTAT_SERIAL), init_integration.entry_id
     )
     assert device is not None
 
@@ -337,3 +342,30 @@ async def test_device_diagnostics(
     )
 
     assert diagnostics == snapshot
+
+
+async def test_device_diagnostics_use_same_placeholders(
+    hass: HomeAssistant,
+    hass_client: ClientSessionGenerator,
+    init_integration: MockConfigEntry,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """A device download uses the same placeholders as the config entry download."""
+    entry_diagnostics = await get_diagnostics_for_config_entry(
+        hass, hass_client, init_integration
+    )
+    device = device_registry.async_get_device_by_identifier(
+        (DOMAIN, THERMOSTAT_SERIAL), init_integration.entry_id
+    )
+    assert device is not None
+
+    device_diagnostics = await get_diagnostics_for_device(
+        hass, hass_client, init_integration, device
+    )
+
+    processed = device_diagnostics["processed_data"]
+    assert entry_diagnostics["processed_data"][processed["serial_number"]] == processed
+    assert (
+        entry_diagnostics["raw_api_data"][processed["object_key"]]
+        == device_diagnostics["raw_data"]
+    )

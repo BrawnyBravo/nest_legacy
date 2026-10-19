@@ -1,7 +1,7 @@
 """Media source for Nest Legacy camera events."""
 
 from collections import defaultdict
-import datetime
+import datetime as dt
 import logging
 from typing import cast, override
 
@@ -284,7 +284,7 @@ class NestMediaSource(MediaSource):
         today = dt_util.now().date()
         children = []
         for i in range(_DAYS_LOOKBACK):
-            day = today - datetime.timedelta(days=i)
+            day = today - dt.timedelta(days=i)
             day_str = day.strftime("%Y-%m-%d")
 
             if i == 0:
@@ -326,11 +326,11 @@ class NestMediaSource(MediaSource):
         if not isinstance(device, NestCamera):
             raise Unresolvable(f"Device not found: {serial_number}")
 
-        day_dt = datetime.datetime.strptime(day_str, "%Y-%m-%d").date()
+        day_dt = dt.datetime.strptime(day_str, "%Y-%m-%d").date()
         start_of_day = dt_util.start_of_local_day(
-            datetime.datetime.combine(day_dt, datetime.time.min)
+            dt.datetime.combine(day_dt, dt.time.min)
         )
-        end_of_day = start_of_day + datetime.timedelta(days=1)
+        end_of_day = start_of_day + dt.timedelta(days=1)
 
         try:
             events = await coordinator.client.async_get_camera_events(
@@ -397,11 +397,11 @@ class NestMediaSource(MediaSource):
         if not isinstance(device, NestCamera):
             raise Unresolvable(f"Device not found: {serial_number}")
 
-        day_dt = datetime.datetime.strptime(day_str, "%Y-%m-%d").date()
+        day_dt = dt.datetime.strptime(day_str, "%Y-%m-%d").date()
         start_of_day = dt_util.start_of_local_day(
-            datetime.datetime.combine(day_dt, datetime.time.min)
+            dt.datetime.combine(day_dt, dt.time.min)
         )
-        end_of_day = start_of_day + datetime.timedelta(days=1)
+        end_of_day = start_of_day + dt.timedelta(days=1)
 
         types_to_fetch = [browse_event_type] if browse_event_type != "all" else None
         try:

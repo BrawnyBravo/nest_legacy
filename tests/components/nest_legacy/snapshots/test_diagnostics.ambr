@@ -41,48 +41,6 @@
         'software_version': None,
       }),
       '**REDACTED_10**': dict({
-        'associated_thermostat_object_key': 'device.**REDACTED_9**',
-        'battery_voltage': None,
-        'current_temperature': 51.5,
-        'has_hot_water_control': True,
-        'has_hot_water_temperature': True,
-        'has_own_serial_number': True,
-        'hot_water_active': False,
-        'hot_water_away_active': False,
-        'hot_water_away_enabled': True,
-        'hot_water_boost_time_to_end': 0,
-        'hot_water_control_active': False,
-        'hot_water_mode': 'schedule',
-        'hot_water_next_transition_time': 0,
-        'is_protobuf': False,
-        'location': '**REDACTED**',
-        'mac_address': None,
-        'model': 'Heat Link for Learning Thermostat (3rd gen, EU)',
-        'name': '**REDACTED**',
-        'object_key': 'heatlink.**REDACTED_10**',
-        'online': True,
-        'serial_number': '**REDACTED_10**',
-        'software_version': '2.1.4',
-        'target_temperature': 55.0,
-        'temperature_scale': 'F',
-      }),
-      '**REDACTED_12**': dict({
-        'associated_thermostat_object_key': 'device.**REDACTED_9**',
-        'battery_level': 92.0,
-        'battery_voltage': None,
-        'current_temperature': 19.5,
-        'is_active_sensor': False,
-        'is_protobuf': False,
-        'location': '**REDACTED**',
-        'mac_address': None,
-        'model': 'Temperature Sensor',
-        'name': '**REDACTED**',
-        'object_key': 'kryptonite.**REDACTED_12**',
-        'online': True,
-        'serial_number': '**REDACTED_12**',
-        'software_version': None,
-      }),
-      '**REDACTED_13**': dict({
         'audio_enabled': True,
         'battery_level': 75.92592592592591,
         'battery_voltage': 4.1,
@@ -97,9 +55,9 @@
         'model': 'Nest Hello Doorbell',
         'name': '**REDACTED**',
         'nexus_api_http_server_url': '**REDACTED**',
-        'object_key': 'quartz.**REDACTED_13**',
+        'object_key': 'quartz.**REDACTED_10**',
         'online': True,
-        'serial_number': '**REDACTED_13**',
+        'serial_number': '**REDACTED_10**',
         'software_version': '1.2.3',
         'status_led_enabled': True,
         'streaming_enabled': True,
@@ -107,7 +65,7 @@
         'video_flipped': False,
         'web_url': '**REDACTED**',
       }),
-      '**REDACTED_14**': dict({
+      '**REDACTED_11**': dict({
         'auto_relock_duration': 120,
         'auto_relock_on': True,
         'battery_level': 85.00000238418579,
@@ -122,18 +80,18 @@
         'name': '**REDACTED**',
         'object_key': 'DEVICE_**REDACTED_3**',
         'online': True,
-        'serial_number': '**REDACTED_14**',
+        'serial_number': '**REDACTED_11**',
         'software_version': '1.0.9',
         'tampered': False,
       }),
-      '**REDACTED_15**': dict({
-        'backplate_temperature': None,
-        'battery_level': 0.0,
-        'battery_voltage': None,
+      '**REDACTED_12**': dict({
+        'backplate_temperature': 21.049999237060547,
+        'battery_level': 86.66663169860843,
+        'battery_voltage': 3.859999895095825,
         'can_cool': True,
         'can_heat': True,
-        'current_humidity': None,
-        'current_temperature': None,
+        'current_humidity': 43,
+        'current_temperature': 21.110000610351562,
         'current_water_temperature': None,
         'dehumidifier_state': False,
         'dual_fuel_breakpoint': -2.1872711181640625,
@@ -148,10 +106,10 @@
         'has_air_filter': False,
         'has_dehumidifier': False,
         'has_dual_fuel': True,
-        'has_fan': False,
+        'has_fan': True,
         'has_hot_water_control': False,
         'has_hot_water_temperature': False,
-        'has_humidifier': False,
+        'has_humidifier': True,
         'heat_link_model': None,
         'heat_link_serial_number': None,
         'heat_link_sw_version': None,
@@ -164,7 +122,7 @@
         'hot_water_next_transition_time': 0,
         'hot_water_temperature': None,
         'humidifier_state': False,
-        'hvac_mode': 'off',
+        'hvac_mode': 'heat',
         'hvac_stage': 'off',
         'hvac_state': 'off',
         'is_eco_mode': False,
@@ -179,16 +137,16 @@
         'online': True,
         'product_id_description': 'Nest Thermostat E Display (1st Generation)',
         'product_revision': 8,
-        'serial_number': '**REDACTED_15**',
+        'serial_number': '**REDACTED_12**',
         'software_version': '6.2-24',
-        'target_humidity': None,
-        'target_temperature': None,
+        'target_humidity': 35.0,
+        'target_temperature': 22.22222222222222,
         'target_temperature_high': None,
         'target_temperature_low': None,
         'temperature_lock': False,
         'temperature_scale': 'F',
       }),
-      '**REDACTED_16**': dict({
+      '**REDACTED_13**': dict({
         'battery_health_state': 0,
         'battery_level': 0.0,
         'battery_voltage': None,
@@ -217,12 +175,12 @@
         'online': True,
         'removed_from_base': False,
         'replace_by_date': None,
-        'serial_number': '**REDACTED_16**',
+        'serial_number': '**REDACTED_13**',
         'smoke_status': False,
         'software_version': '3.4.2',
         'steam_detection_enable': False,
       }),
-      '**REDACTED_17**': dict({
+      '**REDACTED_14**': dict({
         'audio_enabled': True,
         'battery_level': None,
         'battery_voltage': None,
@@ -236,7 +194,7 @@
         'nexus_api_http_server_url': '**REDACTED**',
         'object_key': 'DEVICE_**REDACTED_6**',
         'online': True,
-        'serial_number': '**REDACTED_17**',
+        'serial_number': '**REDACTED_14**',
         'software_version': '1.2.3',
         'status_led_enabled': False,
         'streaming_enabled': True,
@@ -244,8 +202,8 @@
         'video_flipped': False,
         'web_url': '**REDACTED**',
       }),
-      '**REDACTED_18**': dict({
-        'associated_thermostat_object_key': None,
+      '**REDACTED_15**': dict({
+        'associated_thermostat_object_key': 'DEVICE_**REDACTED_4**',
         'battery_level': 70.99999785423279,
         'battery_voltage': None,
         'current_temperature': 19.5,
@@ -257,7 +215,7 @@
         'name': '**REDACTED**',
         'object_key': 'DEVICE_**REDACTED_7**',
         'online': True,
-        'serial_number': '**REDACTED_18**',
+        'serial_number': '**REDACTED_15**',
         'software_version': None,
       }),
       '**REDACTED_8**': dict({
@@ -297,74 +255,12 @@
         'software_version': '3.4.2',
         'steam_detection_enable': True,
       }),
-      '**REDACTED_9**': dict({
-        'backplate_temperature': 21.05,
-        'battery_level': 86.66666666666664,
-        'battery_voltage': 3.86,
-        'can_cool': True,
-        'can_heat': True,
-        'current_humidity': 43,
-        'current_temperature': 21.11,
-        'current_water_temperature': 51.5,
-        'dehumidifier_state': False,
-        'dual_fuel_breakpoint': None,
-        'dual_fuel_breakpoint_override': None,
-        'fan_duration': 900,
-        'fan_max_speed': 1,
-        'fan_state': False,
-        'fan_timer_speed': 1,
-        'fan_timer_timeout': 0,
-        'filter_replacement_needed': None,
-        'filter_runtime': None,
-        'has_air_filter': False,
-        'has_dehumidifier': False,
-        'has_dual_fuel': False,
-        'has_fan': True,
-        'has_hot_water_control': True,
-        'has_hot_water_temperature': True,
-        'has_humidifier': True,
-        'heat_link_model': 'Amber-2.5',
-        'heat_link_serial_number': '**REDACTED_10**',
-        'heat_link_sw_version': '2.1.4',
-        'hot_water_active': False,
-        'hot_water_away_active': False,
-        'hot_water_away_enabled': True,
-        'hot_water_boost_time_to_end': 0,
-        'hot_water_control_active': False,
-        'hot_water_mode': 'schedule',
-        'hot_water_next_transition_time': 0,
-        'hot_water_temperature': 55.0,
-        'humidifier_state': False,
-        'hvac_mode': 'heat',
-        'hvac_stage': None,
-        'hvac_state': 'heating',
-        'is_eco_mode': False,
-        'is_protobuf': False,
-        'leaf': False,
-        'location': '**REDACTED**',
-        'mac_address': '**REDACTED**',
-        'model': 'Learning Thermostat, 3rd Gen',
-        'name': '**REDACTED**',
-        'object_key': 'device.**REDACTED_9**',
-        'occupancy': True,
-        'online': True,
-        'product_id_description': None,
-        'product_revision': None,
-        'serial_number': '**REDACTED_9**',
-        'software_version': '6.2-24',
-        'target_humidity': 35,
-        'target_temperature': 22.22222222222222,
-        'target_temperature_high': 24.444444444444443,
-        'target_temperature_low': 20.0,
-        'temperature_lock': False,
-        'temperature_scale': 'F',
-      }),
     }),
     'raw_api_data': dict({
       'DEVICE_**REDACTED_3**': dict({
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': '**REDACTED_20**',
+            'resourceId': '**REDACTED_17**',
           }),
         }),
         'nest.trait.security.EnhancedBoltLockSettingsTrait': dict({
@@ -372,7 +268,7 @@
           'autoRelockOn': True,
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
-          'serialNumber': '**REDACTED_14**',
+          'serialNumber': '**REDACTED_11**',
           'softwareVersion': '1.0.9',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
@@ -402,8 +298,21 @@
         }),
       }),
       'DEVICE_**REDACTED_4**': dict({
+        'backplate_temperature': dict({
+          'temperatureValue': dict({
+            'temperature': 21.05,
+          }),
+        }),
+        'current_temperature': dict({
+          'temperatureValue': dict({
+            'temperature': 21.11,
+          }),
+        }),
         'nest.trait.hvac.DisplaySettingsTrait': dict({
           'temperatureScale': 'TEMPERATURE_SCALE_F',
+        }),
+        'nest.trait.hvac.EcoModeStateTrait': dict({
+          'ecoMode': 'ECO_MODE_INACTIVE',
         }),
         'nest.trait.hvac.EquipmentSettingsTrait': dict({
           'dualFuelBreakpoint': dict({
@@ -412,11 +321,66 @@
           'dualFuelBreakpointOverride': 'DUAL_FUEL_OVERRIDE_NONE',
           'dualFuelSelected': 'DUAL_FUEL_SELECTION_DUAL_FUEL',
         }),
+        'nest.trait.hvac.FanControlCapabilitiesTrait': dict({
+          'maxAvailableSpeed': 'FAN_SPEED_SETTING_STAGE1',
+        }),
+        'nest.trait.hvac.FanControlSettingsTrait': dict({
+          'timerDuration': '900s',
+        }),
+        'nest.trait.hvac.HumidityControlSettingsTrait': dict({
+          'humidifierTargetHumidity': dict({
+            'value': 35.0,
+          }),
+        }),
         'nest.trait.hvac.HvacControlTrait': dict({
+        }),
+        'nest.trait.hvac.HvacEquipmentCapabilitiesTrait': dict({
+          'hasHumidifier': True,
+          'hasStage1Cool': True,
+          'hasStage1Heat': True,
+        }),
+        'nest.trait.hvac.RemoteComfortSensingSettingsTrait': dict({
+          'activeRcsSelection': dict({
+            'rcsSourceType': 'RCS_SOURCE_TYPE_BACKPLATE',
+          }),
+          'associatedRcsSensors': list([
+            dict({
+              'deviceId': dict({
+                'resourceId': 'DEVICE_**REDACTED_7**',
+              }),
+            }),
+          ]),
+        }),
+        'nest.trait.hvac.TargetTemperatureSettingsTrait': dict({
+          'enabled': True,
+          'targetTemperature': dict({
+            'coolingTarget': dict({
+              'value': 24.444445,
+            }),
+            'heatingTarget': dict({
+              'value': 22.222221,
+            }),
+            'setpointType': 'SET_POINT_TYPE_HEAT',
+          }),
         }),
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': '**REDACTED_21**',
+            'resourceId': '**REDACTED_18**',
+          }),
+        }),
+        'nest.trait.sensor.BatteryVoltageTrait': dict({
+          'batteryValue': dict({
+            'batteryVoltage': 3.86,
+          }),
+        }),
+        'nest.trait.sensor.HumidityTrait': dict({
+          'humidityValue': dict({
+            'humidity': 43.0,
+          }),
+        }),
+        'nest.trait.sensor.TemperatureTrait': dict({
+          'temperatureValue': dict({
+            'temperature': 21.11,
           }),
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
@@ -424,7 +388,7 @@
             'literal': 'Nest Thermostat E Display (1st Generation)',
           }),
           'productRevision': 8,
-          'serialNumber': '**REDACTED_15**',
+          'serialNumber': '**REDACTED_12**',
           'softwareVersion': '6.2-24',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
@@ -437,7 +401,7 @@
       'DEVICE_**REDACTED_5**': dict({
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': '**REDACTED_21**',
+            'resourceId': '**REDACTED_18**',
           }),
         }),
         'nest.trait.safety.SafetyAlarmCOTrait': dict({
@@ -451,7 +415,7 @@
         'nest.trait.sensor.SmokeTrait': dict({
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
-          'serialNumber': '**REDACTED_16**',
+          'serialNumber': '**REDACTED_13**',
           'softwareVersion': '3.4.2',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
@@ -464,7 +428,7 @@
       'DEVICE_**REDACTED_6**': dict({
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': '**REDACTED_20**',
+            'resourceId': '**REDACTED_17**',
           }),
         }),
         'nest.trait.product.camera.RecordingToggleTrait': dict({
@@ -473,7 +437,7 @@
         'nest.trait.product.camera.StreamingProtocolTrait': dict({
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
-          'serialNumber': '**REDACTED_17**',
+          'serialNumber': '**REDACTED_14**',
           'softwareVersion': '1.2.3',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
@@ -486,7 +450,7 @@
       'DEVICE_**REDACTED_7**': dict({
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': '**REDACTED_21**',
+            'resourceId': '**REDACTED_18**',
           }),
         }),
         'nest.trait.sensor.TemperatureTrait': dict({
@@ -495,7 +459,7 @@
           }),
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
-          'serialNumber': '**REDACTED_18**',
+          'serialNumber': '**REDACTED_15**',
           'softwareVersion': '1.0.0',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
@@ -516,13 +480,13 @@
             '0': dict({
               'label': '**REDACTED**',
               'whereId': dict({
-                'resourceId': '**REDACTED_20**',
+                'resourceId': '**REDACTED_17**',
               }),
             }),
             '1': dict({
               'label': '**REDACTED**',
               'whereId': dict({
-                'resourceId': '**REDACTED_21**',
+                'resourceId': '**REDACTED_18**',
               }),
             }),
           }),
@@ -541,51 +505,7 @@
           'serialNumber': '**REDACTED_1**',
         }),
       }),
-      'device.**REDACTED_9**': dict({
-        'backplate_temperature': 21.05,
-        'battery_level': 3.86,
-        'current_humidity': 43,
-        'current_water_temperature': 51.5,
-        'description': '**REDACTED**',
-        'fan_capabilities': 'stage1',
-        'fan_duration': 900,
-        'fan_timer_speed': 'stage1',
-        'fan_timer_timeout': 0,
-        'has_dehumidifier': False,
-        'has_fan': True,
-        'has_hot_water_control': True,
-        'has_hot_water_temperature': True,
-        'has_humidifier': True,
-        'heat_link_model': 'Amber-2.5',
-        'heat_link_serial_number': '**REDACTED_10**',
-        'heat_link_sw_version': '2.1.4',
-        'hot_water_active': False,
-        'hot_water_away_enabled': True,
-        'hot_water_boost_time_to_end': 0,
-        'hot_water_mode': 'schedule',
-        'hot_water_temperature': 55.0,
-        'humidifier_state': False,
-        'mac_address': '**REDACTED**',
-        'model': 'Learning Thermostat, 3rd Gen',
-        'serial_number': '**REDACTED_9**',
-        'software_version': '6.2-24',
-        'target_humidity': 35,
-        'temperature_scale': 'F',
-        'where_id': '**REDACTED_21**',
-      }),
-      'kryptonite.**REDACTED_12**': dict({
-        'battery_level': 92.0,
-        'current_temperature': 19.5,
-        'description': '**REDACTED**',
-        'last_updated_at': 4102444800,
-        'model': 'Temperature Sensor',
-        'serial_number': '**REDACTED_12**',
-        'where_id': '**REDACTED_19**',
-      }),
-      'link.**REDACTED_9**': dict({
-        'structure': 'structure.**REDACTED_1**',
-      }),
-      'quartz.**REDACTED_13**': dict({
+      'quartz.**REDACTED_10**': dict({
         'audio_input_enabled': True,
         'capabilities': list([
           'indoor_chime',
@@ -602,31 +522,12 @@
           'statusled.brightness': 2,
           'video.flipped': False,
         }),
-        'serial_number': '**REDACTED_13**',
+        'serial_number': '**REDACTED_10**',
         'software_version': '1.2.3',
         'streaming_state': 'streaming-enabled',
         'structure_id': '**REDACTED_1**',
         'web_url': '**REDACTED**',
-        'where_id': '**REDACTED_20**',
-      }),
-      'rcs_settings.**REDACTED_9**': dict({
-        'active_rcs_sensors': list([
-        ]),
-        'associated_rcs_sensors': list([
-          'kryptonite.**REDACTED_12**',
-        ]),
-      }),
-      'shared.**REDACTED_9**': dict({
-        'can_cool': True,
-        'can_heat': True,
-        'compressor_lockout_enabled': False,
-        'current_temperature': 21.11,
-        'hvac_ac_state': False,
-        'hvac_heater_state': True,
-        'target_temperature': 22.222222,
-        'target_temperature_high': 24.444444,
-        'target_temperature_low': 20.0,
-        'target_temperature_type': 'heat',
+        'where_id': '**REDACTED_17**',
       }),
       'structure.**REDACTED_1**': dict({
         'away': False,
@@ -660,30 +561,27 @@
         'smoke_status': 0,
         'software_version': '3.4.2',
         'steam_detection_enable': True,
-        'where_id': '**REDACTED_21**',
+        'where_id': '**REDACTED_18**',
         'wifi_mac_address': '**REDACTED**',
         'wired_or_battery': 1,
       }),
-      'track.**REDACTED_9**': dict({
-        'online': True,
-      }),
       'where.**REDACTED_1**': dict({
         'wheres': list([
-          dict({
-            'name': '**REDACTED**',
-            'where_id': '**REDACTED_22**',
-          }),
-          dict({
-            'name': '**REDACTED**',
-            'where_id': '**REDACTED_21**',
-          }),
           dict({
             'name': '**REDACTED**',
             'where_id': '**REDACTED_19**',
           }),
           dict({
             'name': '**REDACTED**',
-            'where_id': '**REDACTED_20**',
+            'where_id': '**REDACTED_18**',
+          }),
+          dict({
+            'name': '**REDACTED**',
+            'where_id': '**REDACTED_16**',
+          }),
+          dict({
+            'name': '**REDACTED**',
+            'where_id': '**REDACTED_17**',
           }),
         ]),
       }),
@@ -696,24 +594,24 @@
 # name: test_device_diagnostics
   dict({
     'device_entry': dict({
-      'hw_version': None,
+      'hw_version': 'Nest Thermostat E Display (1st Generation) rev 8',
       'manufacturer': 'Google',
-      'model': 'Learning Thermostat, 3rd Gen',
+      'model': 'Thermostat',
       'name': '**REDACTED**',
       'sw_version': '6.2-24',
     }),
     'processed_data': dict({
-      'backplate_temperature': 21.05,
-      'battery_level': 86.66666666666664,
-      'battery_voltage': 3.86,
+      'backplate_temperature': 21.049999237060547,
+      'battery_level': 86.66663169860843,
+      'battery_voltage': 3.859999895095825,
       'can_cool': True,
       'can_heat': True,
       'current_humidity': 43,
-      'current_temperature': 21.11,
-      'current_water_temperature': 51.5,
+      'current_temperature': 21.110000610351562,
+      'current_water_temperature': None,
       'dehumidifier_state': False,
-      'dual_fuel_breakpoint': None,
-      'dual_fuel_breakpoint_override': None,
+      'dual_fuel_breakpoint': -2.1872711181640625,
+      'dual_fuel_breakpoint_override': 'none',
       'fan_duration': 900,
       'fan_max_speed': 1,
       'fan_state': False,
@@ -723,78 +621,147 @@
       'filter_runtime': None,
       'has_air_filter': False,
       'has_dehumidifier': False,
-      'has_dual_fuel': False,
+      'has_dual_fuel': True,
       'has_fan': True,
-      'has_hot_water_control': True,
-      'has_hot_water_temperature': True,
+      'has_hot_water_control': False,
+      'has_hot_water_temperature': False,
       'has_humidifier': True,
-      'heat_link_model': 'Amber-2.5',
-      'heat_link_serial_number': '**REDACTED_10**',
-      'heat_link_sw_version': '2.1.4',
+      'heat_link_model': None,
+      'heat_link_serial_number': None,
+      'heat_link_sw_version': None,
       'hot_water_active': False,
       'hot_water_away_active': False,
-      'hot_water_away_enabled': True,
+      'hot_water_away_enabled': False,
       'hot_water_boost_time_to_end': 0,
       'hot_water_control_active': False,
-      'hot_water_mode': 'schedule',
+      'hot_water_mode': 'off',
       'hot_water_next_transition_time': 0,
-      'hot_water_temperature': 55.0,
+      'hot_water_temperature': None,
       'humidifier_state': False,
       'hvac_mode': 'heat',
-      'hvac_stage': None,
-      'hvac_state': 'heating',
+      'hvac_stage': 'off',
+      'hvac_state': 'off',
       'is_eco_mode': False,
-      'is_protobuf': False,
+      'is_protobuf': True,
       'leaf': False,
       'location': '**REDACTED**',
-      'mac_address': '**REDACTED**',
-      'model': 'Learning Thermostat, 3rd Gen',
+      'mac_address': None,
+      'model': 'Thermostat',
       'name': '**REDACTED**',
-      'object_key': 'device.**REDACTED_9**',
+      'object_key': 'DEVICE_**REDACTED_4**',
       'occupancy': True,
       'online': True,
-      'product_id_description': None,
-      'product_revision': None,
-      'serial_number': '**REDACTED_9**',
+      'product_id_description': 'Nest Thermostat E Display (1st Generation)',
+      'product_revision': 8,
+      'serial_number': '**REDACTED_12**',
       'software_version': '6.2-24',
-      'target_humidity': 35,
+      'target_humidity': 35.0,
       'target_temperature': 22.22222222222222,
-      'target_temperature_high': 24.444444444444443,
-      'target_temperature_low': 20.0,
+      'target_temperature_high': None,
+      'target_temperature_low': None,
       'temperature_lock': False,
       'temperature_scale': 'F',
     }),
     'raw_data': dict({
-      'backplate_temperature': 21.05,
-      'battery_level': 3.86,
-      'current_humidity': 43,
-      'current_water_temperature': 51.5,
-      'description': '**REDACTED**',
-      'fan_capabilities': 'stage1',
-      'fan_duration': 900,
-      'fan_timer_speed': 'stage1',
-      'fan_timer_timeout': 0,
-      'has_dehumidifier': False,
-      'has_fan': True,
-      'has_hot_water_control': True,
-      'has_hot_water_temperature': True,
-      'has_humidifier': True,
-      'heat_link_model': 'Amber-2.5',
-      'heat_link_serial_number': '**REDACTED_10**',
-      'heat_link_sw_version': '2.1.4',
-      'hot_water_active': False,
-      'hot_water_away_enabled': True,
-      'hot_water_boost_time_to_end': 0,
-      'hot_water_mode': 'schedule',
-      'hot_water_temperature': 55.0,
-      'humidifier_state': False,
-      'mac_address': '**REDACTED**',
-      'model': 'Learning Thermostat, 3rd Gen',
-      'serial_number': '**REDACTED_9**',
-      'software_version': '6.2-24',
-      'target_humidity': 35,
-      'temperature_scale': 'F',
-      'where_id': '**REDACTED_19**',
+      'backplate_temperature': dict({
+        'temperatureValue': dict({
+          'temperature': 21.05,
+        }),
+      }),
+      'current_temperature': dict({
+        'temperatureValue': dict({
+          'temperature': 21.11,
+        }),
+      }),
+      'nest.trait.hvac.DisplaySettingsTrait': dict({
+        'temperatureScale': 'TEMPERATURE_SCALE_F',
+      }),
+      'nest.trait.hvac.EcoModeStateTrait': dict({
+        'ecoMode': 'ECO_MODE_INACTIVE',
+      }),
+      'nest.trait.hvac.EquipmentSettingsTrait': dict({
+        'dualFuelBreakpoint': dict({
+          'value': -2.187271,
+        }),
+        'dualFuelBreakpointOverride': 'DUAL_FUEL_OVERRIDE_NONE',
+        'dualFuelSelected': 'DUAL_FUEL_SELECTION_DUAL_FUEL',
+      }),
+      'nest.trait.hvac.FanControlCapabilitiesTrait': dict({
+        'maxAvailableSpeed': 'FAN_SPEED_SETTING_STAGE1',
+      }),
+      'nest.trait.hvac.FanControlSettingsTrait': dict({
+        'timerDuration': '900s',
+      }),
+      'nest.trait.hvac.HumidityControlSettingsTrait': dict({
+        'humidifierTargetHumidity': dict({
+          'value': 35.0,
+        }),
+      }),
+      'nest.trait.hvac.HvacControlTrait': dict({
+      }),
+      'nest.trait.hvac.HvacEquipmentCapabilitiesTrait': dict({
+        'hasHumidifier': True,
+        'hasStage1Cool': True,
+        'hasStage1Heat': True,
+      }),
+      'nest.trait.hvac.RemoteComfortSensingSettingsTrait': dict({
+        'activeRcsSelection': dict({
+          'rcsSourceType': 'RCS_SOURCE_TYPE_BACKPLATE',
+        }),
+        'associatedRcsSensors': list([
+          dict({
+            'deviceId': dict({
+              'resourceId': 'DEVICE_**REDACTED_7**',
+            }),
+          }),
+        ]),
+      }),
+      'nest.trait.hvac.TargetTemperatureSettingsTrait': dict({
+        'enabled': True,
+        'targetTemperature': dict({
+          'coolingTarget': dict({
+            'value': 24.444445,
+          }),
+          'heatingTarget': dict({
+            'value': 22.222221,
+          }),
+          'setpointType': 'SET_POINT_TYPE_HEAT',
+        }),
+      }),
+      'nest.trait.located.DeviceLocatedSettingsTrait': dict({
+        'whereAnnotationRid': dict({
+          'resourceId': '**REDACTED_18**',
+        }),
+      }),
+      'nest.trait.sensor.BatteryVoltageTrait': dict({
+        'batteryValue': dict({
+          'batteryVoltage': 3.86,
+        }),
+      }),
+      'nest.trait.sensor.HumidityTrait': dict({
+        'humidityValue': dict({
+          'humidity': 43.0,
+        }),
+      }),
+      'nest.trait.sensor.TemperatureTrait': dict({
+        'temperatureValue': dict({
+          'temperature': 21.11,
+        }),
+      }),
+      'weave.trait.description.DeviceIdentityTrait': dict({
+        'productIdDescription': dict({
+          'literal': 'Nest Thermostat E Display (1st Generation)',
+        }),
+        'productRevision': 8,
+        'serialNumber': '**REDACTED_12**',
+        'softwareVersion': '6.2-24',
+      }),
+      'weave.trait.description.LabelSettingsTrait': dict({
+        'label': '**REDACTED**',
+      }),
+      'weave.trait.heartbeat.LivenessTrait': dict({
+        'status': 'LIVENESS_DEVICE_STATUS_ONLINE',
+      }),
     }),
   })
 # ---
