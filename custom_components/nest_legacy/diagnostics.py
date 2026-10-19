@@ -47,6 +47,8 @@ TO_REDACT = [
     "emergency_contact_phone",
     "guestEmail",
     "initiatingUserId",
+    "gaiaId",
+    "originatorRtsId",
     "phoneNumber",
     "phone_numbers",
     "previousUserId",
@@ -86,26 +88,12 @@ TO_REDACT = [
     "time_zone",
     "timezoneName",
     "zip",
-    # Device, structure and resource identifiers
+    # Fabric IDs are never used as references, so they are blanked rather
+    # than aliased like the identifiers in IDENTIFIER_KEYS.
     "aux_primary_fabric_id",
-    "deviceId",
-    "deviceSerialNumber",
     "fabricId",
-    "heatLinkSerialNumber",
-    "heat_link_serial_number",
-    "hgsStructureId",
     "ifj_primary_fabric_id",
     "primaryFabricId",
-    "resourceId",
-    "rtsDeviceId",
-    "rtsSerialNumber",
-    "rtsStructureId",
-    "serialNumber",
-    "serial_number",
-    "structureId",
-    "structureIds",
-    "structure_id",
-    "weaveDeviceId",
     # Network
     "bssid",
     "bssidHash",
@@ -139,21 +127,56 @@ TO_REDACT = [
     "snapshotUrl",
     "web_url",
     # Names and room ("where") labels chosen by the user
-    "customWheres",
     "description",
     "fixtureNameLabel",
     "label",
     "name",
     "roomName",
-    "spokenWhereId",
     "title",
-    "whereId",
     "whereLabel",
-    "where_id",
     # Opaque settings blobs
     "parameters",
     "service_config",
 ]
+
+# Keys whose values identify a device, structure or room and are referenced
+# from elsewhere: ``device.<serial>`` keys, ``associated_thermostat_object_key``,
+# a structure's ``rtsStructureId``, a device's ``whereAnnotationRid``. Their
+# values are replaced with the same placeholder everywhere in a download
+# instead of being blanked, so those cross-references can still be followed.
+# Values nested under these keys (a ResourceId's ``resourceId``, a StringRef's
+# ``literal``) are treated the same way.
+IDENTIFIER_KEYS = frozenset(
+    {
+        "deviceId",
+        "deviceSerialNumber",
+        "heatLinkSerialNumber",
+        "heat_link_serial_number",
+        "hgsDeviceId",
+        "hgsStructureId",
+        "legacyUuid",
+        "resourceId",
+        "rtsDeviceId",
+        "rtsSerialNumber",
+        "rtsStructureId",
+        "serialNumber",
+        "serial_number",
+        "spokenWhereId",
+        "structureId",
+        "structureIds",
+        "structure_id",
+        "weaveDeviceId",
+        "whereId",
+        "whereLegacyUuid",
+        "where_id",
+    }
+)
+
+# Google's predefined rooms and fixtures use small fixed annotation IDs that
+# are the same in every home, so they are left readable. Larger values are
+# treated as identifiers.
+_ANNOTATION_RE = re.compile(r"^ANNOTATION_([0-9A-F]{16})$", re.IGNORECASE)
+_MAX_PREDEFINED_ANNOTATION = 0xFFFFFFFF
 
 # Values that are redacted whatever key they are stored under, so that
 # addresses and links in fields not listed above never leave the system.
@@ -185,8 +208,40 @@ def _identifier_from_key(key: str) -> str | None:
     return None
 
 
-def _collect_identifiers(coordinator: NestCoordinator) -> list[str]:
-    """Return serials, structure IDs and user IDs used as keys and references."""
+def _is_predefined_annotation(value: str) -> bool:
+    """Return True for a predefined room or fixture ID like ``ANNOTATION_<n>``."""
+    match = _ANNOTATION_RE.match(value)
+    return match is not None and int(match[1], 16) <= _MAX_PREDEFINED_ANNOTATION
+
+
+def _identifier_values(data: Any, in_identifier: bool = False) -> set[str]:
+    """Return the identifiers stored under IDENTIFIER_KEYS anywhere in data.
+
+    A value with a prefix (``structure.<id>``, ``DEVICE_<id>``) contributes the
+    bare ID, so it gets the same placeholder as that ID elsewhere.
+    """
+    if isinstance(data, dict):
+        return set().union(
+            *(
+                _identifier_values(value, in_identifier or key in IDENTIFIER_KEYS)
+                for key, value in data.items()
+            )
+        )
+    if isinstance(data, list):
+        return set().union(*(_identifier_values(item, in_identifier) for item in data))
+    if (
+        in_identifier
+        and isinstance(data, str)
+        and data
+        and data != REDACTED
+        and not _is_predefined_annotation(data)
+    ):
+        return {_identifier_from_key(data) or data}
+    return set()
+
+
+def _collect_identifiers(coordinator: NestCoordinator, data: Any) -> list[str]:
+    """Return the serials and structure, room and user IDs in a download."""
     candidates: set[str | None] = set()
     for key, value in coordinator.data.items():
         candidates.add(key)
@@ -196,6 +251,7 @@ def _collect_identifiers(coordinator: NestCoordinator) -> list[str]:
     for key in coordinator.get_raw_data_for_diagnostics():
         candidates.add(_identifier_from_key(key))
     candidates.add(coordinator.config_entry.unique_id)
+    candidates |= _identifier_values(data)
     return sorted(
         candidate
         for candidate in candidates
@@ -223,6 +279,7 @@ def _redact_identifiers(data: Any, identifiers: list[str]) -> Any:
     Serials and structure IDs are also dictionary keys and parts of other
     strings (``topaz.<serial>``), which async_redact_data does not touch.
     Each identifier gets its own placeholder so references stay readable.
+    A value under IDENTIFIER_KEYS that cannot be replaced is blanked.
     """
     if not identifiers:
         pattern = None
@@ -240,14 +297,28 @@ def _redact_identifiers(data: Any, identifiers: list[str]) -> Any:
             return text
         return pattern.sub(lambda match: aliases[match.group(0)], text)
 
-    def walk(value: Any, key: Any = None) -> Any:
+    def alias_identifier(value: Any) -> Any:
+        if isinstance(value, bool) or value is None:
+            return value
+        if not isinstance(value, str):
+            return REDACTED
+        if not value or value == REDACTED or _is_predefined_annotation(value):
+            return value
+        aliased = alias(value)
+        return aliased if aliased != value else REDACTED
+
+    def walk(value: Any, key: Any = None, in_identifier: bool = False) -> Any:
         if isinstance(value, dict):
             return {
-                alias(k) if isinstance(k, str) else k: walk(v, k)
+                alias(k) if isinstance(k, str) else k: walk(
+                    v, k, in_identifier or k in IDENTIFIER_KEYS
+                )
                 for k, v in value.items()
             }
         if isinstance(value, list):
-            return [walk(item, key) for item in value]
+            return [walk(item, key, in_identifier) for item in value]
+        if in_identifier:
+            return alias_identifier(value)
         if isinstance(value, str):
             if value != REDACTED and _is_sensitive_value(key, value):
                 return REDACTED
@@ -259,9 +330,8 @@ def _redact_identifiers(data: Any, identifiers: list[str]) -> Any:
 
 def _redact(data: dict[str, Any], coordinator: NestCoordinator) -> dict[str, Any]:
     """Redact sensitive keys, then identifiers, addresses and links."""
-    return _redact_identifiers(
-        async_redact_data(data, TO_REDACT), _collect_identifiers(coordinator)
-    )
+    redacted = async_redact_data(data, TO_REDACT)
+    return _redact_identifiers(redacted, _collect_identifiers(coordinator, redacted))
 
 
 async def async_get_config_entry_diagnostics(
