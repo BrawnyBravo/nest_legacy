@@ -11,7 +11,6 @@ from custom_components.nest_legacy.const import (
     CONF_ENABLE_PROTOBUF_CAMERA,
     CONF_ENABLE_PROTOBUF_PROTECT,
     CONF_ENABLE_PROTOBUF_STRUCTURE,
-    CONF_ENABLE_PROTOBUF_THERMOSTAT,
     CONF_EVENT_POLL_INTERVAL,
     CONF_FIELD_TEST,
     CONF_ISSUE_TOKEN,
@@ -440,7 +439,6 @@ async def test_options_flow(
         {
             CONF_EVENT_POLL_INTERVAL: 30,
             CONF_SECTION_PROTOBUF: {
-                CONF_ENABLE_PROTOBUF_THERMOSTAT: False,
                 CONF_ENABLE_PROTOBUF_STRUCTURE: True,
                 CONF_ENABLE_PROTOBUF_PROTECT: True,
                 CONF_ENABLE_PROTOBUF_CAMERA: False,
@@ -454,7 +452,6 @@ async def test_options_flow(
     # keep reading the options as a flat dict.
     assert init_integration.options == {
         CONF_EVENT_POLL_INTERVAL: 30,
-        CONF_ENABLE_PROTOBUF_THERMOSTAT: False,
         CONF_ENABLE_PROTOBUF_STRUCTURE: True,
         CONF_ENABLE_PROTOBUF_PROTECT: True,
         CONF_ENABLE_PROTOBUF_CAMERA: False,

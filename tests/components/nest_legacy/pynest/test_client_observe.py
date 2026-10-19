@@ -1,5 +1,6 @@
 """Tests for the protobuf observe stream and camera event history."""
 
+import logging
 from typing import Any
 
 from custom_components.nest_legacy.pynest.client import NestClient
@@ -130,6 +131,48 @@ async def test_observe_skips_bucketized_traits(
     assert await _collect(client) == [{}]
 
 
+async def test_observe_skips_unpaired_traits(
+    client: NestClient, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The unpaired copies of a trait are settings for unpaired mode."""
+    display = nest_hvac_pb2.DisplaySettingsTrait(wakeOnRemoteTempChange=True)
+    aioclient_mock.post(
+        OBSERVE_URL,
+        content=_stream(_trait_state(display, trait_label="unpaired_display_settings")),
+    )
+
+    assert await _collect(client) == [{}]
+
+
+async def test_observe_keeps_the_paired_trait_over_its_unpaired_copy(
+    client: NestClient,
+    aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A paired label and its unpaired copy neither collide nor swap places.
+
+    The paired label is the live one, so it is what survives under the trait
+    type; see issue #90.
+    """
+    paired = nest_hvac_pb2.DisplaySettingsTrait(wakeOnRemoteTempChange=True)
+    unpaired = nest_hvac_pb2.DisplaySettingsTrait(wakeOnRemoteTempChange=False)
+    aioclient_mock.post(
+        OBSERVE_URL,
+        content=_stream(
+            _trait_state(paired, trait_label="display_settings"),
+            _trait_state(unpaired, trait_label="unpaired_display_settings"),
+        ),
+    )
+
+    results = await _collect(client)
+
+    trait = results[1][RESOURCE_ID][
+        nest_hvac_pb2.DisplaySettingsTrait.DESCRIPTOR.full_name
+    ]
+    assert trait.wakeOnRemoteTempChange is True
+    assert "only one will be used" not in caplog.text
+
+
 async def test_observe_prefers_accepted_state(
     client: NestClient, aioclient_mock: AiohttpClientMocker
 ) -> None:
@@ -181,6 +224,30 @@ async def test_observe_warns_about_colliding_labels(
     await _collect(client)
 
     assert "only one will be used" in caplog.text
+
+
+async def test_observe_warns_once_about_a_repeated_collision(
+    client: NestClient,
+    aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A collision that repeats on every poll is only reported the first time.
+
+    The full values behind it are logged at DEBUG level, once, so a collision
+    does not dominate the log; see issue #90.
+    """
+    equipment = nest_hvac_pb2.EquipmentSettingsTrait()
+    frame = _stream(
+        _trait_state(equipment, trait_label="equipment_settings"),
+        _trait_state(equipment, trait_label="alt_equipment_settings"),
+    )
+    aioclient_mock.post(OBSERVE_URL, content=frame + frame + frame)
+
+    caplog.set_level(logging.DEBUG)
+    await _collect(client)
+
+    assert caplog.text.count("only one will be used") == 1
+    assert caplog.text.count("Colliding traits of type") == 1
 
 
 async def test_observe_keeps_label_specific_traits_apart(

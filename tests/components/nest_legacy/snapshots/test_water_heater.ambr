@@ -42,7 +42,7 @@
     'suggested_object_id': None,
     'supported_features': <WaterHeaterEntityFeature: 11>,
     'translation_key': 'heat_link',
-    'unique_id': '09AA00AA00AA0AAB',
+    'unique_id': '18B430DDDDDD0006',
     'unit_of_measurement': None,
   })
 # ---
@@ -51,12 +51,13 @@
     'attributes': ReadOnlyDict({
       <EntityStateAttribute.ATTRIBUTION: 'attribution'>: 'Data provided by Google/Nest',
       'away_active': False,
-      'boiler_active': False,
-      <WaterHeaterStateAttribute.CURRENT_TEMPERATURE: 'current_temperature'>: 51.5,
+      'boiler_active': True,
+      <WaterHeaterStateAttribute.CURRENT_TEMPERATURE: 'current_temperature'>: 54.5,
       <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'Hallway Heat Link',
-      'hot_water_schedule_active': False,
+      'hot_water_schedule_active': True,
       <WaterHeaterCapabilityAttribute.MAX_TEMP: 'max_temp'>: 70.0,
       <WaterHeaterCapabilityAttribute.MIN_TEMP: 'min_temp'>: 30.0,
+      'next_transition_time': datetime.datetime(2026, 9, 6, 5, 30, tzinfo=datetime.timezone.utc),
       <WaterHeaterCapabilityAttribute.OPERATION_LIST: 'operation_list'>: list([
         'off',
         'schedule',
@@ -68,7 +69,7 @@
       <EntityStateAttribute.SUPPORTED_FEATURES: 'supported_features'>: <WaterHeaterEntityFeature: 11>,
       <WaterHeaterStateAttribute.TARGET_TEMP_HIGH: 'target_temp_high'>: None,
       <WaterHeaterStateAttribute.TARGET_TEMP_LOW: 'target_temp_low'>: None,
-      <WaterHeaterStateAttribute.TARGET_TEMPERATURE: 'temperature'>: 55.0,
+      <WaterHeaterStateAttribute.TARGET_TEMPERATURE: 'temperature'>: 60.0,
     }),
     'context': <ANY>,
     'entity_id': 'water_heater.hallway_hallway_heat_link',

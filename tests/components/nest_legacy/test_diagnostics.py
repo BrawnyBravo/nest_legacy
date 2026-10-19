@@ -10,6 +10,8 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
+from .const import THERMOSTAT_SERIAL
+
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.diagnostics import (
     get_diagnostics_for_config_entry,
@@ -62,7 +64,7 @@ async def test_device_diagnostics(
 ) -> None:
     """The per device diagnostics include the device's own raw data."""
     device = device_registry.async_get_device_by_identifier(
-        (DOMAIN, "09AA00AA00AA0AAA"), init_integration.entry_id
+        (DOMAIN, THERMOSTAT_SERIAL), init_integration.entry_id
     )
     assert device is not None
 
