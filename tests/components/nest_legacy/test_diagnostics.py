@@ -285,9 +285,9 @@ async def test_diagnostics_cross_references(
     assert identity["serialNumber"] == thermostat["serial_number"]
     assert processed[thermostat["serial_number"]] == thermostat
     rcs = raw[thermostat_key]["nest.trait.hvac.RemoteComfortSensingSettingsTrait"]
-    assert [
-        item["deviceId"]["resourceId"] for item in rcs["associatedRcsSensors"]
-    ] == [sensor["object_key"]]
+    assert [item["deviceId"]["resourceId"] for item in rcs["associatedRcsSensors"]] == [
+        sensor["object_key"]
+    ]
 
     # The camera's home is the REST structure the protobuf structure links to.
     camera = next(value for key, value in raw.items() if key.startswith("quartz."))
