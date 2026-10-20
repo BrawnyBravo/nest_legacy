@@ -23,11 +23,11 @@
       'subentries': list([
       ]),
       'title': '**REDACTED**',
-      'unique_id': '1234567890',
+      'unique_id': '**REDACTED**',
       'version': 1,
     }),
     'processed_data': dict({
-      '00000000-0000-0000-0000-000000000001': dict({
+      '**REDACTED_1**': dict({
         'battery_voltage': None,
         'is_protobuf': False,
         'location': None,
@@ -35,49 +35,12 @@
         'mode': 'home',
         'model': None,
         'name': '**REDACTED**',
-        'object_key': 'STRUCTURE_0000000000000001',
+        'object_key': 'STRUCTURE_**REDACTED_2**',
         'online': True,
-        'serial_number': '00000000-0000-0000-0000-000000000001',
+        'serial_number': '**REDACTED_1**',
         'software_version': None,
       }),
-      '09AA00AA00AA0AA1': dict({
-        'battery_health_state': 0,
-        'battery_level': 100,
-        'battery_voltage': 5.8,
-        'co_status': False,
-        'component_buzzer_test_passed': True,
-        'component_co_test_passed': True,
-        'component_hum_test_passed': True,
-        'component_led_test_passed': True,
-        'component_pir_test_passed': True,
-        'component_smoke_test_passed': True,
-        'component_speaker_test_passed': True,
-        'component_wifi_test_passed': True,
-        'heads_up_enable': True,
-        'heat_status': False,
-        'is_protobuf': False,
-        'last_audio_self_test_end_utc_secs': 1767225600,
-        'latest_manual_test_end_utc_secs': 1767225600,
-        'location': '**REDACTED**',
-        'mac_address': '**REDACTED**',
-        'model': 'Topaz-2.7',
-        'name': '**REDACTED**',
-        'night_light_brightness': 2,
-        'night_light_enable': True,
-        'ntp_green_led_enable': True,
-        'object_key': 'topaz.09AA00AA00AA0AA1',
-        'online': True,
-        'removed_from_base': False,
-        'replace_by_date': dict({
-          '__type': "<class 'datetime.date'>",
-          'isoformat': '2030-01-01',
-        }),
-        'serial_number': '09AA00AA00AA0AA1',
-        'smoke_status': False,
-        'software_version': '3.4.2',
-        'steam_detection_enable': True,
-      }),
-      '18B430CCCCCC0002': dict({
+      '**REDACTED_10**': dict({
         'audio_enabled': True,
         'battery_level': 75.92592592592591,
         'battery_voltage': 4.1,
@@ -91,18 +54,18 @@
         'mac_address': '**REDACTED**',
         'model': 'Nest Hello Doorbell',
         'name': '**REDACTED**',
-        'nexus_api_http_server_url': 'https://nexusapi-test.dropcam.com',
-        'object_key': 'quartz.18B430CCCCCC0002',
+        'nexus_api_http_server_url': '**REDACTED**',
+        'object_key': 'quartz.**REDACTED_10**',
         'online': True,
-        'serial_number': '18B430CCCCCC0002',
+        'serial_number': '**REDACTED_10**',
         'software_version': '1.2.3',
         'status_led_enabled': True,
         'streaming_enabled': True,
-        'structure_id': '00000000-0000-0000-0000-000000000001',
+        'structure_id': '**REDACTED_1**',
         'video_flipped': False,
-        'web_url': 'https://home.nest.com/cameras/18B430CCCCCC0002',
+        'web_url': '**REDACTED**',
       }),
-      '18B430DDDDDD0001': dict({
+      '**REDACTED_11**': dict({
         'auto_relock_duration': 120,
         'auto_relock_on': True,
         'battery_level': 85.00000238418579,
@@ -115,13 +78,13 @@
         'max_auto_relock_duration': 600,
         'model': 'Nest x Yale Lock',
         'name': '**REDACTED**',
-        'object_key': 'DEVICE_0000000000000002',
+        'object_key': 'DEVICE_**REDACTED_3**',
         'online': True,
-        'serial_number': '18B430DDDDDD0001',
+        'serial_number': '**REDACTED_11**',
         'software_version': '1.0.9',
         'tampered': False,
       }),
-      '18B430DDDDDD0002': dict({
+      '**REDACTED_12**': dict({
         'backplate_temperature': 21.049999237060547,
         'battery_level': 86.66663169860843,
         'battery_voltage': 3.859999895095825,
@@ -169,12 +132,12 @@
         'mac_address': None,
         'model': 'Thermostat',
         'name': '**REDACTED**',
-        'object_key': 'DEVICE_0000000000000003',
+        'object_key': 'DEVICE_**REDACTED_4**',
         'occupancy': True,
         'online': True,
         'product_id_description': 'Nest Thermostat E Display (1st Generation)',
         'product_revision': 8,
-        'serial_number': '18B430DDDDDD0002',
+        'serial_number': '**REDACTED_12**',
         'software_version': '6.2-24',
         'target_humidity': 35.0,
         'target_temperature': 22.22222222222222,
@@ -183,7 +146,7 @@
         'temperature_lock': False,
         'temperature_scale': 'F',
       }),
-      '18B430DDDDDD0003': dict({
+      '**REDACTED_13**': dict({
         'battery_health_state': 0,
         'battery_level': 0.0,
         'battery_voltage': None,
@@ -208,16 +171,16 @@
         'night_light_brightness': None,
         'night_light_enable': False,
         'ntp_green_led_enable': False,
-        'object_key': 'DEVICE_0000000000000004',
+        'object_key': 'DEVICE_**REDACTED_5**',
         'online': True,
         'removed_from_base': False,
         'replace_by_date': None,
-        'serial_number': '18B430DDDDDD0003',
+        'serial_number': '**REDACTED_13**',
         'smoke_status': False,
         'software_version': '3.4.2',
         'steam_detection_enable': False,
       }),
-      '18B430DDDDDD0004': dict({
+      '**REDACTED_14**': dict({
         'audio_enabled': True,
         'battery_level': None,
         'battery_voltage': None,
@@ -228,19 +191,19 @@
         'mac_address': None,
         'model': 'Camera (unknown)',
         'name': '**REDACTED**',
-        'nexus_api_http_server_url': 'https://nexusapi.dropcam.com',
-        'object_key': 'DEVICE_0000000000000005',
+        'nexus_api_http_server_url': '**REDACTED**',
+        'object_key': 'DEVICE_**REDACTED_6**',
         'online': True,
-        'serial_number': '18B430DDDDDD0004',
+        'serial_number': '**REDACTED_14**',
         'software_version': '1.2.3',
         'status_led_enabled': False,
         'streaming_enabled': True,
         'structure_id': None,
         'video_flipped': False,
-        'web_url': 'https://home.nest.com/camera/DEVICE_0000000000000005',
+        'web_url': '**REDACTED**',
       }),
-      '18B430DDDDDD0005': dict({
-        'associated_thermostat_object_key': 'DEVICE_0000000000000003',
+      '**REDACTED_15**': dict({
+        'associated_thermostat_object_key': 'DEVICE_**REDACTED_4**',
         'battery_level': 70.99999785423279,
         'battery_voltage': None,
         'current_temperature': 19.5,
@@ -250,17 +213,54 @@
         'mac_address': None,
         'model': 'Temperature Sensor',
         'name': '**REDACTED**',
-        'object_key': 'DEVICE_0000000000000006',
+        'object_key': 'DEVICE_**REDACTED_7**',
         'online': True,
-        'serial_number': '18B430DDDDDD0005',
+        'serial_number': '**REDACTED_15**',
         'software_version': None,
+      }),
+      '**REDACTED_8**': dict({
+        'battery_health_state': 0,
+        'battery_level': 100,
+        'battery_voltage': 5.8,
+        'co_status': False,
+        'component_buzzer_test_passed': True,
+        'component_co_test_passed': True,
+        'component_hum_test_passed': True,
+        'component_led_test_passed': True,
+        'component_pir_test_passed': True,
+        'component_smoke_test_passed': True,
+        'component_speaker_test_passed': True,
+        'component_wifi_test_passed': True,
+        'heads_up_enable': True,
+        'heat_status': False,
+        'is_protobuf': False,
+        'last_audio_self_test_end_utc_secs': 1767225600,
+        'latest_manual_test_end_utc_secs': 1767225600,
+        'location': '**REDACTED**',
+        'mac_address': '**REDACTED**',
+        'model': 'Topaz-2.7',
+        'name': '**REDACTED**',
+        'night_light_brightness': 2,
+        'night_light_enable': True,
+        'ntp_green_led_enable': True,
+        'object_key': 'topaz.**REDACTED_8**',
+        'online': True,
+        'removed_from_base': False,
+        'replace_by_date': dict({
+          '__type': "<class 'datetime.date'>",
+          'isoformat': '2030-01-01',
+        }),
+        'serial_number': '**REDACTED_8**',
+        'smoke_status': False,
+        'software_version': '3.4.2',
+        'steam_detection_enable': True,
       }),
     }),
     'raw_api_data': dict({
-      'DEVICE_0000000000000002': dict({
+      'DEVICE_**REDACTED_3**': dict({
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': 'where-front-door',
+            'resourceId': '**REDACTED_17**',
           }),
         }),
         'nest.trait.security.EnhancedBoltLockSettingsTrait': dict({
@@ -268,11 +268,11 @@
           'autoRelockOn': True,
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
-          'serialNumber': '18B430DDDDDD0001',
+          'serialNumber': '**REDACTED_11**',
           'softwareVersion': '1.0.9',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
-          'label': 'Front Door',
+          'label': '**REDACTED**',
         }),
         'weave.trait.heartbeat.LivenessTrait': dict({
           'status': 'LIVENESS_DEVICE_STATUS_ONLINE',
@@ -297,7 +297,7 @@
           'tamperState': 'TAMPER_STATE_CLEAR',
         }),
       }),
-      'DEVICE_0000000000000003': dict({
+      'DEVICE_**REDACTED_4**': dict({
         'backplate_temperature': dict({
           'temperatureValue': dict({
             'temperature': 21.05,
@@ -346,7 +346,7 @@
           'associatedRcsSensors': list([
             dict({
               'deviceId': dict({
-                'resourceId': 'DEVICE_0000000000000006',
+                'resourceId': 'DEVICE_**REDACTED_7**',
               }),
             }),
           ]),
@@ -365,7 +365,7 @@
         }),
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': 'where-hallway',
+            'resourceId': '**REDACTED_18**',
           }),
         }),
         'nest.trait.sensor.BatteryVoltageTrait': dict({
@@ -388,20 +388,20 @@
             'literal': 'Nest Thermostat E Display (1st Generation)',
           }),
           'productRevision': 8,
-          'serialNumber': '18B430DDDDDD0002',
+          'serialNumber': '**REDACTED_12**',
           'softwareVersion': '6.2-24',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
-          'label': 'Upstairs',
+          'label': '**REDACTED**',
         }),
         'weave.trait.heartbeat.LivenessTrait': dict({
           'status': 'LIVENESS_DEVICE_STATUS_ONLINE',
         }),
       }),
-      'DEVICE_0000000000000004': dict({
+      'DEVICE_**REDACTED_5**': dict({
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': 'where-hallway',
+            'resourceId': '**REDACTED_18**',
           }),
         }),
         'nest.trait.safety.SafetyAlarmCOTrait': dict({
@@ -415,20 +415,20 @@
         'nest.trait.sensor.SmokeTrait': dict({
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
-          'serialNumber': '18B430DDDDDD0003',
+          'serialNumber': '**REDACTED_13**',
           'softwareVersion': '3.4.2',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
-          'label': 'Landing',
+          'label': '**REDACTED**',
         }),
         'weave.trait.heartbeat.LivenessTrait': dict({
           'status': 'LIVENESS_DEVICE_STATUS_ONLINE',
         }),
       }),
-      'DEVICE_0000000000000005': dict({
+      'DEVICE_**REDACTED_6**': dict({
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': 'where-front-door',
+            'resourceId': '**REDACTED_17**',
           }),
         }),
         'nest.trait.product.camera.RecordingToggleTrait': dict({
@@ -437,20 +437,20 @@
         'nest.trait.product.camera.StreamingProtocolTrait': dict({
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
-          'serialNumber': '18B430DDDDDD0004',
+          'serialNumber': '**REDACTED_14**',
           'softwareVersion': '1.2.3',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
-          'label': 'Driveway',
+          'label': '**REDACTED**',
         }),
         'weave.trait.heartbeat.LivenessTrait': dict({
           'status': 'LIVENESS_DEVICE_STATUS_ONLINE',
         }),
       }),
-      'DEVICE_0000000000000006': dict({
+      'DEVICE_**REDACTED_7**': dict({
         'nest.trait.located.DeviceLocatedSettingsTrait': dict({
           'whereAnnotationRid': dict({
-            'resourceId': 'where-hallway',
+            'resourceId': '**REDACTED_18**',
           }),
         }),
         'nest.trait.sensor.TemperatureTrait': dict({
@@ -459,11 +459,11 @@
           }),
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
-          'serialNumber': '18B430DDDDDD0005',
+          'serialNumber': '**REDACTED_15**',
           'softwareVersion': '1.0.0',
         }),
         'weave.trait.description.LabelSettingsTrait': dict({
-          'label': 'Study Sensor',
+          'label': '**REDACTED**',
         }),
         'weave.trait.heartbeat.LivenessTrait': dict({
           'status': 'LIVENESS_DEVICE_STATUS_ONLINE',
@@ -474,23 +474,19 @@
           }),
         }),
       }),
-      'STRUCTURE_0000000000000001': dict({
+      'STRUCTURE_**REDACTED_2**': dict({
         'nest.trait.located.LocatedAnnotationsTrait': dict({
           'predefinedWheres': dict({
             '0': dict({
-              'label': dict({
-                'literal': 'Front Door',
-              }),
+              'label': '**REDACTED**',
               'whereId': dict({
-                'resourceId': 'where-front-door',
+                'resourceId': '**REDACTED_17**',
               }),
             }),
             '1': dict({
-              'label': dict({
-                'literal': 'Hallway',
-              }),
+              'label': '**REDACTED**',
               'whereId': dict({
-                'resourceId': 'where-hallway',
+                'resourceId': '**REDACTED_18**',
               }),
             }),
           }),
@@ -500,26 +496,24 @@
         }),
         'nest.trait.structure.StructureInfoTrait': dict({
           'name': '**REDACTED**',
-          'rtsStructureId': 'structure.00000000-0000-0000-0000-000000000001',
+          'rtsStructureId': 'structure.**REDACTED_1**',
         }),
         'nest.trait.structure.StructureLocationTrait': dict({
-          'addressLines': list([
-            '1 Test Street',
-          ]),
+          'addressLines': '**REDACTED**',
         }),
         'weave.trait.description.DeviceIdentityTrait': dict({
-          'serialNumber': '00000000-0000-0000-0000-000000000001',
+          'serialNumber': '**REDACTED_1**',
         }),
       }),
-      'quartz.18B430CCCCCC0002': dict({
+      'quartz.**REDACTED_10**': dict({
         'audio_input_enabled': True,
         'capabilities': list([
           'indoor_chime',
         ]),
-        'description': 'Doorbell',
+        'description': '**REDACTED**',
         'mac_address': '**REDACTED**',
         'model': 'Nest Hello Doorbell',
-        'nexus_api_http_server_url': 'https://nexusapi-test.dropcam.com',
+        'nexus_api_http_server_url': '**REDACTED**',
         'properties': dict({
           'doorbell.chime_assist.enabled': False,
           'doorbell.indoor_chime.enabled': True,
@@ -528,19 +522,19 @@
           'statusled.brightness': 2,
           'video.flipped': False,
         }),
-        'serial_number': '18B430CCCCCC0002',
+        'serial_number': '**REDACTED_10**',
         'software_version': '1.2.3',
         'streaming_state': 'streaming-enabled',
-        'structure_id': '00000000-0000-0000-0000-000000000001',
-        'web_url': 'https://home.nest.com/cameras/18B430CCCCCC0002',
-        'where_id': 'where-front-door',
+        'structure_id': '**REDACTED_1**',
+        'web_url': '**REDACTED**',
+        'where_id': '**REDACTED_17**',
       }),
-      'structure.00000000-0000-0000-0000-000000000001': dict({
+      'structure.**REDACTED_1**': dict({
         'away': False,
         'name': '**REDACTED**',
         'vacation_mode': False,
       }),
-      'topaz.09AA00AA00AA0AA1': dict({
+      'topaz.**REDACTED_8**': dict({
         'battery_health_state': 0,
         'battery_level': 5800,
         'co_status': 0,
@@ -552,7 +546,7 @@
         'component_smoke_test_passed': True,
         'component_speaker_test_passed': True,
         'component_wifi_test_passed': True,
-        'description': 'Hallway Protect',
+        'description': '**REDACTED**',
         'heads_up_enable': True,
         'heat_status': 0,
         'last_audio_self_test_end_utc_secs': 1767225600,
@@ -563,35 +557,35 @@
         'ntp_green_led_enable': True,
         'removed_from_base': False,
         'replace_by_date_utc_secs': 1893456000,
-        'serial_number': '09AA00AA00AA0AA1',
+        'serial_number': '**REDACTED_8**',
         'smoke_status': 0,
         'software_version': '3.4.2',
         'steam_detection_enable': True,
-        'where_id': 'where-hallway',
+        'where_id': '**REDACTED_18**',
         'wifi_mac_address': '**REDACTED**',
         'wired_or_battery': 1,
       }),
-      'where.00000000-0000-0000-0000-000000000001': dict({
+      'where.**REDACTED_1**': dict({
         'wheres': list([
           dict({
             'name': '**REDACTED**',
-            'where_id': 'where-living-room',
+            'where_id': '**REDACTED_19**',
           }),
           dict({
             'name': '**REDACTED**',
-            'where_id': 'where-hallway',
+            'where_id': '**REDACTED_18**',
           }),
           dict({
             'name': '**REDACTED**',
-            'where_id': 'where-bedroom',
+            'where_id': '**REDACTED_16**',
           }),
           dict({
             'name': '**REDACTED**',
-            'where_id': 'where-front-door',
+            'where_id': '**REDACTED_17**',
           }),
         ]),
       }),
-      'widget_track.09AA00AA00AA0AA1': dict({
+      'widget_track.**REDACTED_8**': dict({
         'online': True,
       }),
     }),
@@ -654,12 +648,12 @@
       'mac_address': None,
       'model': 'Thermostat',
       'name': '**REDACTED**',
-      'object_key': 'DEVICE_0000000000000003',
+      'object_key': 'DEVICE_**REDACTED_4**',
       'occupancy': True,
       'online': True,
       'product_id_description': 'Nest Thermostat E Display (1st Generation)',
       'product_revision': 8,
-      'serial_number': '18B430DDDDDD0002',
+      'serial_number': '**REDACTED_12**',
       'software_version': '6.2-24',
       'target_humidity': 35.0,
       'target_temperature': 22.22222222222222,
@@ -717,7 +711,7 @@
         'associatedRcsSensors': list([
           dict({
             'deviceId': dict({
-              'resourceId': 'DEVICE_0000000000000006',
+              'resourceId': 'DEVICE_**REDACTED_7**',
             }),
           }),
         ]),
@@ -736,7 +730,7 @@
       }),
       'nest.trait.located.DeviceLocatedSettingsTrait': dict({
         'whereAnnotationRid': dict({
-          'resourceId': 'where-hallway',
+          'resourceId': '**REDACTED_18**',
         }),
       }),
       'nest.trait.sensor.BatteryVoltageTrait': dict({
@@ -759,11 +753,11 @@
           'literal': 'Nest Thermostat E Display (1st Generation)',
         }),
         'productRevision': 8,
-        'serialNumber': '18B430DDDDDD0002',
+        'serialNumber': '**REDACTED_12**',
         'softwareVersion': '6.2-24',
       }),
       'weave.trait.description.LabelSettingsTrait': dict({
-        'label': 'Upstairs',
+        'label': '**REDACTED**',
       }),
       'weave.trait.heartbeat.LivenessTrait': dict({
         'status': 'LIVENESS_DEVICE_STATUS_ONLINE',
