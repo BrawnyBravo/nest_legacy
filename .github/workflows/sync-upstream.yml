@@ -47,7 +47,8 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ github.token }}
+      # GH_TOKEN is NOT set here: it is given only to the steps that need it
+      # (push, issue writes), never to the step that runs on merged upstream content.
       # Pin every gh call to THIS fork. The job adds an 'upstream' remote, and gh
       # prefers a remote named upstream as the base repo - which aimed label and
       # issue writes at the maintainer's repository instead of this fork.
@@ -64,7 +65,9 @@ jobs:
         with:
           ref: ${{ inputs.target_branch || 'main' }}
           fetch-depth: 0
-          persist-credentials: true
+          # No token in .git/config while upstream content is merged; the push
+          # step supplies it for that one command.
+          persist-credentials: false
 
       - name: Configure git identity
         run: |
@@ -92,7 +95,7 @@ jobs:
           # release zip. The fork installs main from its default branch.
           resolve_hacs() {
             git show "upstream/${UPSTREAM_REF}:${HACS}" > "${RUNNER_TEMP}/hacs-up.json" || return 1
-            python3 - "${RUNNER_TEMP}/hacs-up.json" "${HACS}" <<'PY' || return 1
+            python3 -I - "${RUNNER_TEMP}/hacs-up.json" "${HACS}" <<'PY' || return 1
           import json, sys
           data = json.load(open(sys.argv[1], encoding="utf-8"))
           if not isinstance(data, dict) or "name" not in data:
@@ -108,10 +111,10 @@ jobs:
           # manifest.json: upstream's file with the fork's own version string.
           resolve_manifest() {
             FORK_VER="$(git show "HEAD:${MANIFEST}" \
-              | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')" || return 1
+              | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["version"])')" || return 1
             [ -n "${FORK_VER}" ] && [ "${FORK_VER}" != "0.0.0" ] || return 1
             git show "upstream/${UPSTREAM_REF}:${MANIFEST}" > "${RUNNER_TEMP}/manifest-up.json" || return 1
-            python3 - "${RUNNER_TEMP}/manifest-up.json" "${MANIFEST}" "${FORK_VER}" <<'PY' || return 1
+            python3 -I - "${RUNNER_TEMP}/manifest-up.json" "${MANIFEST}" "${FORK_VER}" <<'PY' || return 1
           import json, sys
           data = json.load(open(sys.argv[1], encoding="utf-8"))
           if "version" not in data:
@@ -198,7 +201,7 @@ jobs:
               echo "::error::merge commit changes ${WF}; refusing to push"
               exit 1
             fi
-            if python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if "zip_release" in d or "filename" in d else 1)' "${HACS}"; then
+            if python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if "zip_release" in d or "filename" in d else 1)' "${HACS}"; then
               echo "::error::${HACS} would switch the fork to release installs; refusing to push"
               exit 1
             fi
@@ -224,10 +227,17 @@ jobs:
 
       - name: Push merged branch
         if: steps.merge.outputs.result == 'merged'
-        run: git push origin "HEAD:${BRANCH}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          AUTH="$(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 -w0)"
+          HEADER="http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH}"
+          git -c "${HEADER}" push origin "HEAD:${BRANCH}"
 
       - name: Close resolved conflict issues
         if: steps.merge.outputs.result != 'conflict'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Only close alerts raised for THIS ref pair, so a self-test run cannot
           # close a live main-to-main alert.
@@ -246,6 +256,7 @@ jobs:
       - name: Report conflict
         if: steps.merge.outputs.result == 'conflict'
         env:
+          GH_TOKEN: ${{ github.token }}
           UPSTREAM_HEAD: ${{ steps.merge.outputs.upstream_head }}
           CONFLICTS: ${{ steps.merge.outputs.conflicts }}
         run: |
