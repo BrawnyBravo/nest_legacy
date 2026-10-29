@@ -44,6 +44,12 @@ on a real install before it goes upstream.
 **Do not create Releases here.** A release switches HACS back to release-based installs, and it would
 silently stop tracking `main` while the sync job keeps reporting success.
 
+**One exception exists.** Release `v0.8.0-bb.1` (2026-10-10) was built from the `bb/install` branch,
+which carries upstream's `hacs.json` unchanged, to test [#87](https://github.com/tronikos/nest_legacy/pull/87) and
+[#88](https://github.com/tronikos/nest_legacy/pull/88) before upstream released them.
+While that release exists, an install of this fork gets that release, not `main`. Both changes shipped
+upstream in v0.8.1 (2026-10-24), so the release is no longer needed.
+
 ### 2. `custom_components/nest_legacy/manifest.json`: real version instead of `0.0.0`
 
 Upstream keeps `"version": "0.0.0"` in the tree and rewrites it at release time from the git tag
@@ -59,9 +65,22 @@ made here.
 ## Syncing: these lines conflict by design
 
 The version line and `hacs.json` are deliberate edits to files upstream also changes, so the daily sync
-**will** conflict on them from time to time. That is expected, not a fault. Take **upstream's** version
-of the file, then re-apply the divergence above. Neither should ever be "fixed" by accepting upstream
-wholesale, and a conflict is always resolved, never left for the fork to drift.
+**will** conflict on them from time to time. That is expected, not a fault, and since 2026-10-29 the
+sync job settles it itself by a fixed rule:
+
+- `hacs.json`: upstream's file, minus `zip_release` and `filename`.
+- `manifest.json`: upstream's file, with the fork's own `version` string kept.
+
+A conflict in any other file still backs the merge out and opens an issue. The job also refuses to push
+if the merged `hacs.json` would carry `zip_release` or `filename`.
+
+## Syncing: workflow files stay the fork's own
+
+The sync job never takes upstream's changes under `.github/workflows/`. Its token has no `workflows`
+permission, so GitHub refuses any push whose commits change a workflow file. The job puts every
+workflow file back to the fork's copy before committing the merge (files upstream adds are dropped,
+files it changes or deletes are restored) and refuses to push if the merge would still change one. To
+adopt an upstream workflow change, copy it across by hand in a pull request.
 
 ## Sending a change upstream
 

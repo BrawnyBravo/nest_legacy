@@ -1,16 +1,20 @@
 name: Sync with upstream
 
 # Keeps this fork's main branch level with the upstream project.
-# Runs every day; if the merge conflicts, it backs out and opens an issue here.
+# Runs every day; if the merge hits an unexpected conflict, it backs out and
+# opens an issue here.
 #
 # Tags are deliberately NOT followed in either direction. This fork carries its
 # own "-house.N" version in manifest.json, and republishing upstream's release
 # tags from here would make the fork's version indistinguishable from upstream's.
 #
-# EXPECTED CONFLICTS: manifest.json (the version line) and hacs.json carry
-# deliberate fork-only edits, so a sync will sometimes conflict on them. Take
-# upstream's file and re-apply the divergence described in FORK-NOTES.md.
-# A conflict is resolved, never left to drift.
+# EXPECTED CONFLICTS are settled by the job itself, by a fixed rule
+# (FORK-NOTES.md): hacs.json becomes upstream's file minus "zip_release" and
+# "filename"; manifest.json becomes upstream's file with the fork's own version
+# string. A conflict in any other file still backs out and is reported.
+#
+# Workflow files are never taken from upstream: GITHUB_TOKEN cannot push a
+# commit that changes .github/workflows, so the fork's copies are kept.
 #
 # Do NOT create GitHub Releases on this fork without reading the install notes in
 # PLAN.md first: for the Govee fork a release silently switches HACS from tracking
@@ -76,6 +80,68 @@ jobs:
       - name: Merge upstream
         id: merge
         run: |
+          # hacs.json and the manifest version line are the fork's deliberate
+          # divergences (FORK-NOTES.md), so a conflict there is expected and is
+          # settled here by a fixed rule instead of being reported. Any other
+          # conflict still backs out and opens an issue.
+          HACS="hacs.json"
+          MANIFEST="custom_components/nest_legacy/manifest.json"
+          WF=".github/workflows"
+
+          # hacs.json: upstream's file minus the keys that make HACS install a
+          # release zip. The fork installs main from its default branch.
+          resolve_hacs() {
+            git show "upstream/${UPSTREAM_REF}:${HACS}" > "${RUNNER_TEMP}/hacs-up.json" || return 1
+            python3 - "${RUNNER_TEMP}/hacs-up.json" "${HACS}" <<'PY' || return 1
+          import json, sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          if not isinstance(data, dict) or "name" not in data:
+              sys.exit("upstream hacs.json does not look like a HACS manifest")
+          for key in ("zip_release", "filename"):
+              data.pop(key, None)
+          with open(sys.argv[2], "w", encoding="utf-8", newline="\n") as fh:
+              fh.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+          PY
+            git add -- "${HACS}"
+          }
+
+          # manifest.json: upstream's file with the fork's own version string.
+          resolve_manifest() {
+            FORK_VER="$(git show "HEAD:${MANIFEST}" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')" || return 1
+            [ -n "${FORK_VER}" ] && [ "${FORK_VER}" != "0.0.0" ] || return 1
+            git show "upstream/${UPSTREAM_REF}:${MANIFEST}" > "${RUNNER_TEMP}/manifest-up.json" || return 1
+            python3 - "${RUNNER_TEMP}/manifest-up.json" "${MANIFEST}" "${FORK_VER}" <<'PY' || return 1
+          import json, sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          if "version" not in data:
+              sys.exit("upstream manifest.json has no version key")
+          data["version"] = sys.argv[3]
+          with open(sys.argv[2], "w", encoding="utf-8", newline="\n") as fh:
+              fh.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+          PY
+            git add -- "${MANIFEST}"
+          }
+
+          # Workflow files stay the fork's own. GITHUB_TOKEN has no 'workflows'
+          # permission, so GitHub refuses a push whose commits change anything
+          # under .github/workflows. Drop files upstream adds, restore ones it
+          # changes or deletes, settle conflicts there to the fork side.
+          keep_fork_workflows() {
+            local head_list="${RUNNER_TEMP}/wf-head" index_list="${RUNNER_TEMP}/wf-index" f
+            git ls-tree -r --name-only HEAD -- "${WF}" | sort > "${head_list}"
+            git ls-files -- "${WF}" | sort -u > "${index_list}"
+            comm -13 "${head_list}" "${index_list}" | while IFS= read -r f; do
+              git rm -q -f -- "${f}" || exit 1
+            done || return 1
+            if [ -s "${head_list}" ]; then
+              git checkout HEAD -- "${WF}" || return 1
+            fi
+            [ -z "$(git diff --name-only --diff-filter=U -- "${WF}")" ] || return 1
+            git diff --cached --quiet HEAD -- "${WF}" || return 1
+            [ -z "$(git status --porcelain -- "${WF}")" ] || return 1
+          }
+
           BEFORE="$(git rev-parse HEAD)"
           UPSTREAM_HEAD="$(git rev-parse "upstream/${UPSTREAM_REF}")"
           echo "upstream_head=${UPSTREAM_HEAD}" >> "$GITHUB_OUTPUT"
@@ -86,24 +152,74 @@ jobs:
             exit 0
           fi
 
-          if git merge --no-edit "upstream/${UPSTREAM_REF}"; then
+          # Never commit straight from the merge: known conflicts and workflow
+          # files are settled first, and --no-ff stops a fast-forward bringing
+          # upstream's workflow changes in untouched.
+          git merge --no-commit --no-ff "upstream/${UPSTREAM_REF}" || true
+          CONFLICTS=""
+          SETTLED=""
+          OK=""
+          if ! git rev-parse -q --verify MERGE_HEAD > /dev/null; then
+            # No merge in progress means git refused to start one (dirty tree,
+            # unrelated histories...). Nothing to undo; report it.
+            :
+          elif ! keep_fork_workflows; then
+            echo "::error::could not put ${WF} back to the fork's copy"
+            CONFLICTS="$(git diff --name-only --diff-filter=U || true)"
+            [ -n "${CONFLICTS}" ] || CONFLICTS="${WF} (could not keep the fork's copy)"
+          else
+            # Read the unmerged paths BEFORE aborting; the abort clears them.
+            CONFLICTS="$(git diff --name-only --diff-filter=U || true)"
+            OK=1
+            for f in ${CONFLICTS}; do
+              case "${f}" in
+                "${HACS}") resolve_hacs || { OK=""; break; } ;;
+                "${MANIFEST}") resolve_manifest || { OK=""; break; } ;;
+                *) OK=""; break ;;
+              esac
+              SETTLED="${SETTLED} ${f}"
+            done
+            if [ -n "${OK}" ] && [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+              echo "::error::unmerged paths left after settling known conflicts"
+              OK=""
+            fi
+          fi
+
+          if [ -n "${OK}" ]; then
+            MESSAGE="Merge upstream ${UPSTREAM}@${UPSTREAM_REF}"
+            DETAIL="The fork's own ${WF} is kept; upstream workflow changes are not taken (see sync-upstream.yml)."
+            if [ -n "${SETTLED}" ]; then
+              DETAIL="${DETAIL} Settled by rule (FORK-NOTES.md):${SETTLED}."
+              echo "Settled expected conflicts:${SETTLED}"
+            fi
+            git commit -q -m "${MESSAGE}" -m "${DETAIL}"
+            # Belt and braces: the push would be refused if this were wrong.
+            if ! git diff --quiet "${BEFORE}" HEAD -- "${WF}"; then
+              echo "::error::merge commit changes ${WF}; refusing to push"
+              exit 1
+            fi
+            if python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if "zip_release" in d or "filename" in d else 1)' "${HACS}"; then
+              echo "::error::${HACS} would switch the fork to release installs; refusing to push"
+              exit 1
+            fi
             if [ "$BEFORE" = "$(git rev-parse HEAD)" ]; then
               echo "result=up-to-date" >> "$GITHUB_OUTPUT"
             else
               echo "result=merged" >> "$GITHUB_OUTPUT"
             fi
-          else
-            # Read the unmerged paths BEFORE aborting; the abort clears them.
-            CONFLICTS="$(git diff --name-only --diff-filter=U || true)"
+            exit 0
+          fi
+
+          if git rev-parse -q --verify MERGE_HEAD > /dev/null; then
             git merge --abort || true
-            echo "result=conflict" >> "$GITHUB_OUTPUT"
-            echo "conflicts<<CONFLICT_LIST" >> "$GITHUB_OUTPUT"
-            echo "${CONFLICTS}" >> "$GITHUB_OUTPUT"
-            echo "CONFLICT_LIST" >> "$GITHUB_OUTPUT"
-            if [ "$BEFORE" != "$(git rev-parse HEAD)" ]; then
-              echo "::error::abort left ${BRANCH} moved; refusing to continue"
-              exit 1
-            fi
+          fi
+          echo "result=conflict" >> "$GITHUB_OUTPUT"
+          echo "conflicts<<CONFLICT_LIST" >> "$GITHUB_OUTPUT"
+          echo "${CONFLICTS}" >> "$GITHUB_OUTPUT"
+          echo "CONFLICT_LIST" >> "$GITHUB_OUTPUT"
+          if [ "$BEFORE" != "$(git rev-parse HEAD)" ]; then
+            echo "::error::abort left ${BRANCH} moved; refusing to continue"
+            exit 1
           fi
 
       - name: Push merged branch
