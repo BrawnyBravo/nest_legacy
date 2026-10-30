@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-import datetime
+import datetime as dt
 from typing import Any, override
 
 from homeassistant.components.sensor import (
@@ -15,6 +15,7 @@ from homeassistant.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfElectricPotential,
+    UnitOfRatio,
     UnitOfTemperature,
     UnitOfTime,
 )
@@ -31,6 +32,7 @@ from .pynest.models import (
     NestHeatLink,
     NestLock,
     NestProtect,
+    NestStructure,
     NestTempSensor,
     NestThermostat,
 )
@@ -42,7 +44,7 @@ PARALLEL_UPDATES = 0
 class NestSensorEntityDescription(SensorEntityDescription):
     """Class to describe a Nest sensor."""
 
-    value_fn: Callable[[Any], StateType | datetime.datetime]
+    value_fn: Callable[[Any], StateType | dt.datetime]
     device_types: tuple[type[NestDevice], ...]
 
 
@@ -96,9 +98,7 @@ _DESCRIPTIONS: tuple[NestSensorEntityDescription, ...] = (
         key="latest_manual_test_end_utc_secs",
         translation_key="last_manual_test",
         value_fn=lambda device: (
-            datetime.datetime.fromtimestamp(
-                device.latest_manual_test_end_utc_secs, datetime.UTC
-            )
+            dt.datetime.fromtimestamp(device.latest_manual_test_end_utc_secs, dt.UTC)
             if device.latest_manual_test_end_utc_secs > 0
             else None
         ),
@@ -111,9 +111,7 @@ _DESCRIPTIONS: tuple[NestSensorEntityDescription, ...] = (
         key="last_audio_self_test_end_utc_secs",
         translation_key="last_audio_self_test",
         value_fn=lambda device: (
-            datetime.datetime.fromtimestamp(
-                device.last_audio_self_test_end_utc_secs, datetime.UTC
-            )
+            dt.datetime.fromtimestamp(device.last_audio_self_test_end_utc_secs, dt.UTC)
             if device.last_audio_self_test_end_utc_secs > 0
             else None
         ),
@@ -121,6 +119,35 @@ _DESCRIPTIONS: tuple[NestSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         device_types=(NestProtect,),
         entity_registry_enabled_default=False,
+    ),
+    NestSensorEntityDescription(
+        key="co_previous_peak",
+        translation_key="co_previous_peak",
+        value_fn=lambda device: device.co_previous_peak,
+        device_class=SensorDeviceClass.CO,
+        native_unit_of_measurement=UnitOfRatio.PARTS_PER_MILLION,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_types=(NestProtect,),
+    ),
+    # Structure safety summary (all Protects in the home)
+    NestSensorEntityDescription(
+        key="safety_critical_failures",
+        translation_key="safety_critical_failures",
+        icon="mdi:shield-alert",
+        value_fn=lambda device: device.safety_critical_failures,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_types=(NestStructure,),
+    ),
+    NestSensorEntityDescription(
+        key="safety_warnings",
+        translation_key="safety_warnings",
+        icon="mdi:shield-half-full",
+        value_fn=lambda device: device.safety_warnings,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_types=(NestStructure,),
     ),
     # Temp Sensor
     NestSensorEntityDescription(
@@ -207,7 +234,7 @@ _FAN_DESCRIPTIONS: tuple[NestSensorEntityDescription, ...] = (
         key="fan_timer_timeout",
         translation_key="fan_timer_timeout",
         value_fn=lambda device: (
-            datetime.datetime.fromtimestamp(device.fan_timer_timeout, datetime.UTC)
+            dt.datetime.fromtimestamp(device.fan_timer_timeout, dt.UTC)
             if device.fan_timer_timeout > 0
             else None
         ),
@@ -264,6 +291,6 @@ class NestSensor(NestEntity[NestDevice], SensorEntity):
 
     @override
     @property
-    def native_value(self) -> StateType | datetime.datetime:
+    def native_value(self) -> StateType | dt.datetime:
         """Return the state of the sensor."""
         return self.entity_description.value_fn(self.device)

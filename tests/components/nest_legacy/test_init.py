@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
 from . import setup_integration
+from .const import THERMOSTAT_SERIAL
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -47,10 +48,7 @@ async def test_devices_are_registered(
 
     assert {next(iter(device.identifiers))[1] for device in devices} == {
         "00000000-0000-0000-0000-000000000001",
-        "09AA00AA00AA0AAA",
-        "09AA00AA00AA0AAB",
         "09AA00AA00AA0AA1",
-        "18B430CCCCCC0001",
         "18B430CCCCCC0002",
         "18B430DDDDDD0001",
         "18B430DDDDDD0003",
@@ -60,14 +58,19 @@ async def test_devices_are_registered(
     }
 
     thermostat = device_registry.async_get_device_by_identifier(
-        (DOMAIN, "09AA00AA00AA0AAA"), init_integration.entry_id
+        (DOMAIN, THERMOSTAT_SERIAL), init_integration.entry_id
     )
     assert thermostat is not None
-    assert thermostat.name == "Hallway Thermostat"
+    assert thermostat.name == "Hallway Upstairs"
     assert thermostat.manufacturer == "Google"
-    assert thermostat.model == "Learning Thermostat, 3rd Gen"
+    assert thermostat.model == "Thermostat"
     assert thermostat.sw_version == "6.2-24"
-    assert (dr.CONNECTION_NETWORK_MAC, "18:b4:30:00:00:01") in thermostat.connections
+
+    protect = device_registry.async_get_device_by_identifier(
+        (DOMAIN, "09AA00AA00AA0AA1"), init_integration.entry_id
+    )
+    assert protect is not None
+    assert (dr.CONNECTION_NETWORK_MAC, "18:b4:30:00:00:02") in protect.connections
 
 
 async def test_bad_credentials_starts_reauth(

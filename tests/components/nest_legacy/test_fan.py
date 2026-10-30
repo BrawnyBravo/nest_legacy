@@ -3,6 +3,9 @@
 from typing import Any
 from unittest.mock import AsyncMock
 
+from custom_components.nest_legacy.pynest.protobuf_gen.nest.trait import (
+    hvac_pb2 as nest_hvac_pb2,
+)
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
@@ -23,14 +26,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from . import setup_integration
+from .const import THERMOSTAT_KEY
 
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     snapshot_platform,
 )
 
-ENTITY_ID = "fan.hallway_hallway_thermostat_fan"
-THERMOSTAT = "09AA00AA00AA0AAA"
+ENTITY_ID = "fan.hallway_hallway_upstairs_fan"
+
+_FAN_SPEED = nest_hvac_pb2.FanControlTrait.FanSpeedSetting
 
 
 @pytest.fixture
@@ -76,13 +81,17 @@ async def test_multi_speed_fan(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    observe_data: dict[str, dict[str, Any]],
 ) -> None:
     """A multi stage fan maps percentages onto stages; see issue #49."""
-    device = app_launch_data[f"device.{THERMOSTAT}"]
-    device["fan_capabilities"] = "stage3"
-    device["fan_timer_speed"] = "stage2"
-    device["fan_timer_timeout"] = 4102444800
+    thermostat = observe_data[THERMOSTAT_KEY]
+    capabilities = thermostat[
+        nest_hvac_pb2.FanControlCapabilitiesTrait.DESCRIPTOR.full_name
+    ]
+    capabilities.maxAvailableSpeed = _FAN_SPEED.FAN_SPEED_SETTING_STAGE3
+    settings = thermostat[nest_hvac_pb2.FanControlSettingsTrait.DESCRIPTOR.full_name]
+    settings.timerSpeed = _FAN_SPEED.FAN_SPEED_SETTING_STAGE2
+    settings.timerEnd.FromSeconds(4102444800)
     await setup_integration(hass, mock_config_entry)
 
     state = hass.states.get(ENTITY_ID)
@@ -122,10 +131,12 @@ async def test_no_fan_entity_without_fan(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    observe_data: dict[str, dict[str, Any]],
 ) -> None:
     """A thermostat without a fan gets no fan entity."""
-    app_launch_data[f"device.{THERMOSTAT}"]["has_fan"] = False
+    del observe_data[THERMOSTAT_KEY][
+        nest_hvac_pb2.FanControlCapabilitiesTrait.DESCRIPTOR.full_name
+    ]
     await setup_integration(hass, mock_config_entry)
 
     assert hass.states.get(ENTITY_ID) is None

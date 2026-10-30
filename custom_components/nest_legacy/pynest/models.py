@@ -2,7 +2,7 @@
 """Models used by PyNest."""
 
 from dataclasses import dataclass, fields
-import datetime
+import datetime as dt
 from typing import Any, override
 
 from .enums import (
@@ -64,7 +64,7 @@ class NestProtect(NestDevice):
     heat_status: bool = False
     battery_level: float = 0.0
     battery_health_state: int = 0
-    replace_by_date: datetime.date | None = None
+    replace_by_date: dt.date | None = None
     night_light_enable: bool = False
     steam_detection_enable: bool = False
     night_light_brightness: int | None = None
@@ -82,6 +82,12 @@ class NestProtect(NestDevice):
     last_audio_self_test_end_utc_secs: int = 0
     ntp_green_led_enable: bool = False
     heads_up_enable: bool = False
+    # Only reported by the legacy REST API; None when the device is read over
+    # protobuf, so the matching entities are not created there.
+    hushed_state: bool | None = None
+    co_previous_peak: int | None = None
+    component_als_test_passed: bool | None = None
+    component_temp_test_passed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -123,9 +129,8 @@ class NestThermostat(NestDevice):
     target_humidity: float | None = None
     hvac_state: ThermostatHvacState = ThermostatHvacState.OFF
     hvac_mode: ThermostatHvacMode = ThermostatHvacMode.OFF
-    # Which stage the equipment is running, OFF when idle. None on the legacy
-    # API, which reports heating/cooling without the stage.
-    hvac_stage: ThermostatHvacStage | None = None
+    # Which stage the equipment is running, OFF when idle.
+    hvac_stage: ThermostatHvacStage = ThermostatHvacStage.OFF
     is_eco_mode: bool = False
     can_heat: bool = False
     can_cool: bool = False
@@ -247,6 +252,10 @@ class NestStructure(NestDevice):
     """Represents a Nest Structure (i.e., a home)."""
 
     mode: StructureMode = StructureMode.HOME
+    # Safety summary across the structure's Protects (legacy REST API only).
+    # None when the structure has no Protect.
+    safety_critical_failures: int | None = None
+    safety_warnings: int | None = None
 
 
 @dataclass(frozen=True)
@@ -340,13 +349,13 @@ class NestSession:
         """Check if session is expired."""
         try:
             expires_in_str = self.expires_in.removesuffix(" GMT")
-            expiry_date = datetime.datetime.strptime(
+            expiry_date = dt.datetime.strptime(
                 expires_in_str, "%a, %d-%b-%Y %H:%M:%S"
-            ).replace(tzinfo=datetime.UTC)
+            ).replace(tzinfo=dt.UTC)
             # pynest is kept free of homeassistant imports, so dt_util.utcnow()
             # is not available here.
             # pylint: disable-next=home-assistant-enforce-utcnow
-            return expiry_date <= datetime.datetime.now(datetime.UTC)
+            return expiry_date <= dt.datetime.now(dt.UTC)
         except ValueError, AttributeError:
             return False
 

@@ -39,6 +39,7 @@ from ..const import (
     LOCK_SERIAL,
     PROTECT_SERIAL,
     STRUCTURE_KEY,
+    TEMP_SENSOR_KEY,
     TEMP_SENSOR_SERIAL,
     THERMOSTAT_KEY,
     THERMOSTAT_SERIAL,
@@ -46,7 +47,7 @@ from ..const import (
     protobuf_updates,
 )
 
-THERMOSTAT = "09AA00AA00AA0AAA"
+PROTECT = "09AA00AA00AA0AA1"
 
 _HEAT_LINK_CONNECTION = nest_hvac_pb2.HeatLinkSettingsTrait.HeatLinkConnectionType
 
@@ -72,6 +73,11 @@ def _by_serial(parser: NestParser, raw_data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _thermostat_trait(raw_data: dict[str, Any], trait_class: type[Any]) -> Any:
+    """Return the protobuf thermostat's trait of the given class."""
+    return raw_data[THERMOSTAT_KEY][trait_class.DESCRIPTOR.full_name]
+
+
 def _hvac_state(
     raw_data: dict[str, Any],
 ) -> nest_hvac_pb2.HvacControlTrait.HvacState:
@@ -85,22 +91,33 @@ def _hvac_state(
 async def test_every_device_type_is_parsed(
     parser: NestParser, raw_data: dict[str, Any]
 ) -> None:
-    """One payload produces one device per physical device plus the heat link."""
+    """One payload produces one device per physical device."""
     devices = _by_serial(parser, raw_data)
 
     assert set(devices) == {
         "00000000-0000-0000-0000-000000000001",
-        "09AA00AA00AA0AAA",
-        "09AA00AA00AA0AAB",
-        "09AA00AA00AA0AA1",
-        "18B430CCCCCC0001",
+        PROTECT,
         "18B430CCCCCC0002",
-        "18B430DDDDDD0001",
-        "18B430DDDDDD0002",
-        "18B430DDDDDD0003",
-        "18B430DDDDDD0004",
-        "18B430DDDDDD0005",
+        LOCK_SERIAL,
+        THERMOSTAT_SERIAL,
+        PROTECT_SERIAL,
+        CAMERA_SERIAL,
+        TEMP_SENSOR_SERIAL,
     }
+
+
+async def test_rest_thermostat_buckets_are_ignored(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """Thermostats and their sensors are read over protobuf only."""
+    raw_data["device.09AA00AA00AA0AAA"] = {"serial_number": "09AA00AA00AA0AAA"}
+    raw_data["shared.09AA00AA00AA0AAA"] = {"target_temperature": 21.0}
+    raw_data["kryptonite.18B430CCCCCC0001"] = {"serial_number": "18B430CCCCCC0001"}
+
+    devices = _by_serial(parser, raw_data)
+
+    assert "09AA00AA00AA0AAA" not in devices
+    assert "18B430CCCCCC0001" not in devices
 
 
 async def test_locations_come_from_both_apis(
@@ -109,8 +126,7 @@ async def test_locations_come_from_both_apis(
     """Rooms are resolved from the REST wheres and the protobuf annotations."""
     devices = _by_serial(parser, raw_data)
 
-    assert devices["09AA00AA00AA0AAA"].location == "Hallway"
-    assert devices["18B430CCCCCC0001"].location == "Bedroom"
+    assert devices[PROTECT].location == "Hallway"
     assert devices[LOCK_SERIAL].location == "Front Door"
 
 
@@ -127,21 +143,27 @@ async def test_room_names_are_trimmed(
 
     devices = _by_serial(parser, raw_data)
 
-    assert devices["09AA00AA00AA0AAA"].location == "Hallway"
-    assert devices["18B430CCCCCC0001"].location == "Bedroom"
+    assert devices[PROTECT].location == "Hallway"
     assert devices[LOCK_SERIAL].location == "Kids Room"
 
 
 async def test_thermostat_values(parser: NestParser, raw_data: dict[str, Any]) -> None:
-    """The REST thermostat is parsed into the shape the entities expect."""
-    thermostat = _by_serial(parser, raw_data)["09AA00AA00AA0AAA"]
+    """The thermostat is parsed into the shape the entities expect."""
+    thermostat = _by_serial(parser, raw_data)[THERMOSTAT_SERIAL]
 
     assert isinstance(thermostat, NestThermostat)
     assert thermostat.temperature_scale is TemperatureScale.FAHRENHEIT
     assert thermostat.hvac_mode is ThermostatHvacMode.HEAT
-    assert thermostat.hvac_state is ThermostatHvacState.HEATING
-    # Stages are protobuf only; the REST API reports heating without the stage.
-    assert thermostat.hvac_stage is None
+    assert thermostat.hvac_state is ThermostatHvacState.OFF
+    assert thermostat.hvac_stage is ThermostatHvacStage.OFF
+    # 22.222222 C is exactly 72 F.
+    assert thermostat.target_temperature == pytest.approx(22.2222, abs=1e-4)
+    assert thermostat.current_temperature == pytest.approx(21.11)
+    assert thermostat.backplate_temperature == pytest.approx(21.05)
+    assert thermostat.current_humidity == 43
+    assert thermostat.target_humidity == 35
+    assert thermostat.has_humidifier
+    assert thermostat.has_fan
     assert thermostat.can_heat
     assert thermostat.can_cool
     assert thermostat.online
@@ -153,49 +175,61 @@ async def test_unparseable_device_is_skipped(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """A device missing its serial number is skipped, not fatal; see issue #9."""
-    del raw_data[f"device.{THERMOSTAT}"]["serial_number"]
+    del raw_data[f"topaz.{PROTECT}"]["serial_number"]
 
     devices = _by_serial(parser, raw_data)
 
-    assert THERMOSTAT not in devices
+    assert PROTECT not in devices
     # The rest of the account still comes through.
-    assert "09AA00AA00AA0AA1" in devices
+    assert THERMOSTAT_SERIAL in devices
     assert "due to a parsing error" in caplog.text
 
 
 @pytest.mark.parametrize(
     ("scale", "expected"),
     [
-        ("F", TemperatureScale.FAHRENHEIT),
-        ("C", TemperatureScale.CELSIUS),
-        # Unrecognised values fall back rather than dropping the thermostat.
-        ("K", TemperatureScale.CELSIUS),
-        (None, TemperatureScale.CELSIUS),
+        (
+            nest_hvac_pb2.DisplaySettingsTrait.TemperatureScale.TEMPERATURE_SCALE_F,
+            TemperatureScale.FAHRENHEIT,
+        ),
+        (
+            nest_hvac_pb2.DisplaySettingsTrait.TemperatureScale.TEMPERATURE_SCALE_C,
+            TemperatureScale.CELSIUS,
+        ),
+        # A scale the thermostat leaves unset falls back to Celsius.
+        (
+            nest_hvac_pb2.DisplaySettingsTrait.TemperatureScale.TEMPERATURE_SCALE_UNSPECIFIED,
+            TemperatureScale.CELSIUS,
+        ),
     ],
 )
-async def test_temperature_scale_fallback(
+async def test_temperature_scale(
     parser: NestParser,
     raw_data: dict[str, Any],
-    scale: str | None,
+    scale: nest_hvac_pb2.DisplaySettingsTrait.TemperatureScale.ValueType,
     expected: TemperatureScale,
 ) -> None:
-    """An unknown temperature scale defaults to Celsius."""
-    raw_data[f"device.{THERMOSTAT}"]["temperature_scale"] = scale
+    """The display scale decides between Fahrenheit and Celsius."""
+    _thermostat_trait(
+        raw_data, nest_hvac_pb2.DisplaySettingsTrait
+    ).temperatureScale = scale
 
-    thermostat = _by_serial(parser, raw_data)["09AA00AA00AA0AAA"]
+    thermostat = _by_serial(parser, raw_data)[THERMOSTAT_SERIAL]
 
     assert thermostat.temperature_scale is expected
 
 
-async def test_unknown_hvac_mode_falls_back_to_off(
+async def test_disabled_target_temperature_is_off(
     parser: NestParser, raw_data: dict[str, Any]
 ) -> None:
-    """An unrecognised target temperature type is reported as off."""
-    raw_data[f"shared.{THERMOSTAT}"]["target_temperature_type"] = "something-new"
+    """A thermostat with its target temperature disabled is off."""
+    target = _thermostat_trait(raw_data, nest_hvac_pb2.TargetTemperatureSettingsTrait)
+    target.enabled.value = False
 
-    thermostat = _by_serial(parser, raw_data)["09AA00AA00AA0AAA"]
+    thermostat = _by_serial(parser, raw_data)[THERMOSTAT_SERIAL]
 
     assert thermostat.hvac_mode is ThermostatHvacMode.OFF
+    assert thermostat.target_temperature is None
 
 
 async def test_eco_on_a_heat_only_thermostat(
@@ -203,17 +237,23 @@ async def test_eco_on_a_heat_only_thermostat(
 ) -> None:
     """Eco on a heat only device stays in heat; see issue #38.
 
-    The REST API reports target_temperature_type as "eco" while eco is active,
-    which must not be read as a heat/cool range.
+    Without the eco enabled flags, the equipment decides between heat, cool
+    and a heat/cool range.
     """
-    shared = raw_data[f"shared.{THERMOSTAT}"]
-    shared["target_temperature_type"] = "eco"
-    shared["can_cool"] = False
-    shared["eco"] = {"mode": "manual-eco"}
-    shared["away_temperature_low"] = 12.0
-    shared["away_temperature_high"] = 26.0
+    _thermostat_trait(
+        raw_data, nest_hvac_pb2.HvacEquipmentCapabilitiesTrait
+    ).hasStage1Cool = False
+    _thermostat_trait(
+        raw_data, nest_hvac_pb2.EcoModeStateTrait
+    ).ecoMode = nest_hvac_pb2.EcoModeStateTrait.EcoMode.ECO_MODE_MANUAL_ECO
+    eco = nest_hvac_pb2.EcoModeSettingsTrait()
+    eco.ecoTemperatureHeat.value.value = 12.0
+    eco.ecoTemperatureCool.value.value = 26.0
+    raw_data[THERMOSTAT_KEY][
+        nest_hvac_pb2.EcoModeSettingsTrait.DESCRIPTOR.full_name
+    ] = eco
 
-    thermostat = _by_serial(parser, raw_data)["09AA00AA00AA0AAA"]
+    thermostat = _by_serial(parser, raw_data)[THERMOSTAT_SERIAL]
 
     assert thermostat.is_eco_mode
     assert thermostat.hvac_mode is ThermostatHvacMode.HEAT
@@ -221,18 +261,18 @@ async def test_eco_on_a_heat_only_thermostat(
     assert thermostat.target_temperature == pytest.approx(12.2222, abs=1e-4)
 
 
-async def test_remote_sensor_takes_over_the_temperature(
+async def test_active_remote_sensor(
     parser: NestParser, raw_data: dict[str, Any]
 ) -> None:
-    """An active remote sensor supplies the thermostat's temperature; issue #20."""
-    raw_data[f"rcs_settings.{THERMOSTAT}"]["active_rcs_sensors"] = [
-        "kryptonite.18B430CCCCCC0001"
-    ]
+    """The sensor the thermostat follows is flagged as active; see issue #20."""
+    rcs = _thermostat_trait(raw_data, nest_hvac_pb2.RemoteComfortSensingSettingsTrait)
+    rcs.activeRcsSelection.rcsSourceType = nest_hvac_pb2.RemoteComfortSensingSettingsTrait.RcsSourceType.RCS_SOURCE_TYPE_SINGLE_SENSOR
+    rcs.activeRcsSelection.activeRcsSensor.resourceId = TEMP_SENSOR_KEY
 
-    devices = _by_serial(parser, raw_data)
+    sensor = _by_serial(parser, raw_data)[TEMP_SENSOR_SERIAL]
 
-    assert devices["09AA00AA00AA0AAA"].current_temperature == 19.5
-    assert devices["18B430CCCCCC0001"].is_active_sensor
+    assert sensor.is_active_sensor
+    assert sensor.associated_thermostat_object_key == THERMOSTAT_KEY
 
 
 @pytest.mark.parametrize(
@@ -244,6 +284,7 @@ async def test_remote_sensor_takes_over_the_temperature(
         ("Something-9", "Heat Link (Something-9)"),
     ],
 )
+@pytest.mark.usefixtures("hot_water")
 async def test_heat_link_model_names(
     parser: NestParser,
     raw_data: dict[str, Any],
@@ -251,28 +292,32 @@ async def test_heat_link_model_names(
     expected: str,
 ) -> None:
     """Heat link hardware codes become names a user recognises; see issue #11."""
-    raw_data[f"device.{THERMOSTAT}"]["heat_link_model"] = heat_link_model
+    _thermostat_trait(
+        raw_data, nest_hvac_pb2.HeatLinkTrait
+    ).heatLinkModel.value = heat_link_model
 
-    heat_link = _by_serial(parser, raw_data)["09AA00AA00AA0AAB"]
+    heat_link = _by_serial(parser, raw_data)[HEAT_LINK_SERIAL]
 
     assert isinstance(heat_link, NestHeatLink)
     assert heat_link.model == expected
-    assert heat_link.hot_water_mode is HotWaterMode.SCHEDULE
 
 
+@pytest.mark.usefixtures("hot_water")
 async def test_heat_link_serial_number_provenance(
     parser: NestParser, raw_data: dict[str, Any]
 ) -> None:
     """A heat link that reports no serial gets a derived one, not a hardware one."""
-    heat_link = _by_serial(parser, raw_data)["09AA00AA00AA0AAB"]
+    heat_link = _by_serial(parser, raw_data)[HEAT_LINK_SERIAL]
 
     assert isinstance(heat_link, NestHeatLink)
     assert heat_link.has_own_serial_number
-    assert heat_link.hardware_serial_number == "09AA00AA00AA0AAB"
+    assert heat_link.hardware_serial_number == HEAT_LINK_SERIAL
 
-    del raw_data[f"device.{THERMOSTAT}"]["heat_link_serial_number"]
+    _thermostat_trait(raw_data, nest_hvac_pb2.HeatLinkTrait).ClearField(
+        "heatLinkSerialNumber"
+    )
 
-    derived = _by_serial(parser, raw_data)[f"{THERMOSTAT}-hot-water"]
+    derived = _by_serial(parser, raw_data)[f"{THERMOSTAT_SERIAL}-hot-water"]
 
     assert isinstance(derived, NestHeatLink)
     assert not derived.has_own_serial_number
@@ -283,11 +328,11 @@ async def test_no_heat_link_without_hot_water(
     parser: NestParser, raw_data: dict[str, Any]
 ) -> None:
     """A thermostat with no hot water does not get a heat link."""
-    device = raw_data[f"device.{THERMOSTAT}"]
-    device["has_hot_water_control"] = False
-    device["has_hot_water_temperature"] = False
+    devices = _by_serial(parser, raw_data)
 
-    assert "09AA00AA00AA0AAB" not in _by_serial(parser, raw_data)
+    assert not [
+        device for device in devices.values() if isinstance(device, NestHeatLink)
+    ]
 
 
 async def test_structure_needs_its_protobuf_key(
@@ -712,6 +757,87 @@ async def test_protobuf_protect(parser: NestParser, raw_data: dict[str, Any]) ->
     assert protect.name == "Landing"
     assert not protect.smoke_status
     assert not protect.co_status
+
+
+REST_PROTECT = "09AA00AA00AA0AA1"
+_REST_PROTECT_KEY = f"topaz.{REST_PROTECT}"
+_REST_STRUCTURE_ID = "00000000-0000-0000-0000-000000000001"
+
+
+async def test_rest_protect_extras(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """The REST Protect reports hush, CO peak and the extra component tests."""
+    raw_data[_REST_PROTECT_KEY].update(
+        hushed_state=True,
+        co_previous_peak=120,
+        component_als_test_passed=False,
+        component_temp_test_passed=True,
+    )
+
+    protect = _by_serial(parser, raw_data)[REST_PROTECT]
+
+    assert protect.hushed_state is True
+    assert protect.co_previous_peak == 120
+    assert protect.component_als_test_passed is False
+    assert protect.component_temp_test_passed is True
+
+
+async def test_rest_protect_extras_missing(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """Fields the Protect does not send stay None, so no entity is made."""
+    for field in (
+        "hushed_state",
+        "component_als_test_passed",
+        "component_temp_test_passed",
+    ):
+        raw_data[_REST_PROTECT_KEY].pop(field)
+    raw_data[_REST_PROTECT_KEY]["co_previous_peak"] = "not a number"
+
+    protect = _by_serial(parser, raw_data)[REST_PROTECT]
+
+    assert protect.hushed_state is None
+    assert protect.co_previous_peak is None
+    assert protect.component_als_test_passed is None
+    assert protect.component_temp_test_passed is None
+
+
+async def test_protobuf_protect_has_no_rest_only_fields(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """The protobuf Protect has no source for the REST-only fields."""
+    protect = _by_serial(parser, raw_data)[PROTECT_SERIAL]
+
+    assert protect.hushed_state is None
+    assert protect.co_previous_peak is None
+
+
+async def test_structure_safety_summary(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """A home with a Protect carries its safety summary counts."""
+    raw_data[f"safety_summary.{_REST_STRUCTURE_ID}"] = {
+        "total_critical_failures": 1,
+        "total_warnings": 2,
+    }
+
+    (structure,) = _structures(parser, raw_data)
+
+    assert structure.safety_critical_failures == 1
+    assert structure.safety_warnings == 2
+
+
+async def test_structure_safety_summary_needs_a_protect(
+    parser: NestParser, raw_data: dict[str, Any]
+) -> None:
+    """A home without a Protect does not expose the always-zero summary."""
+    del raw_data[_REST_PROTECT_KEY]["structure_id"]
+
+    (structure,) = _structures(parser, raw_data)
+
+    assert structure.safety_critical_failures is None
+    assert structure.safety_warnings is None
 
 
 async def test_unnamed_camera(parser: NestParser, raw_data: dict[str, Any]) -> None:

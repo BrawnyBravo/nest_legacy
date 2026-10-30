@@ -23,7 +23,7 @@ from homeassistant.components.climate import (
     SERVICE_SET_HVAC_MODE,
     HVACMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from homeassistant.const import ATTR_ENTITY_ID, STATE_ON, STATE_UNAVAILABLE, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
@@ -32,15 +32,16 @@ from .const import LOCK_KEY, STRUCTURE_KEY
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-REST_CLIMATE = "climate.hallway_hallway_thermostat"
+REST_SMOKE = "binary_sensor.hallway_hallway_protect_smoke"
 PROTOBUF_CLIMATE = "climate.hallway_hallway_upstairs"
+REST_PROTECT_KEY = "topaz.09AA00AA00AA0AA1"
 CAMERA_SERIAL = "18B430CCCCCC0002"
 
 
 @pytest.fixture
 def platforms() -> list[Platform]:
-    """Only the climate platform is needed to observe availability."""
-    return [Platform.CLIMATE]
+    """Set up a protobuf climate entity and a REST binary sensor to watch."""
+    return [Platform.BINARY_SENSOR, Platform.CLIMATE]
 
 
 @pytest.fixture(autouse=True)
@@ -124,7 +125,7 @@ async def test_repeated_failures_mark_entities_unavailable(
     subscribe_results: asyncio.Queue[Any],
 ) -> None:
     """After a few failures the REST-backed entities go unavailable."""
-    assert hass.states.get(REST_CLIMATE).state != STATE_UNAVAILABLE
+    assert hass.states.get(REST_SMOKE).state != STATE_UNAVAILABLE
 
     for _ in range(4):
         subscribe_results.put_nowait(ClientError("boom"))
@@ -132,7 +133,7 @@ async def test_repeated_failures_mark_entities_unavailable(
 
     coordinator = _coordinator(init_integration)
     assert coordinator.subscriber_healthy is False
-    assert hass.states.get(REST_CLIMATE).state == STATE_UNAVAILABLE
+    assert hass.states.get(REST_SMOKE).state == STATE_UNAVAILABLE
     # The protobuf stream is still up, so its devices stay available.
     assert hass.states.get(PROTOBUF_CLIMATE).state != STATE_UNAVAILABLE
 
@@ -147,13 +148,13 @@ async def test_subscriber_recovers(
     for _ in range(4):
         subscribe_results.put_nowait(ClientError("boom"))
     await _settle(hass, mock_nest_client.async_subscribe_for_updates, 5)
-    assert hass.states.get(REST_CLIMATE).state == STATE_UNAVAILABLE
+    assert hass.states.get(REST_SMOKE).state == STATE_UNAVAILABLE
 
     subscribe_results.put_nowait({})
     await _settle(hass, mock_nest_client.async_subscribe_for_updates, 6)
 
     assert _coordinator(init_integration).subscriber_healthy is True
-    assert hass.states.get(REST_CLIMATE).state != STATE_UNAVAILABLE
+    assert hass.states.get(REST_SMOKE).state != STATE_UNAVAILABLE
 
 
 async def test_dropped_connections_are_not_failures(
@@ -169,7 +170,7 @@ async def test_dropped_connections_are_not_failures(
     await _settle(hass, mock_nest_client.async_subscribe_for_updates, 10)
 
     assert _coordinator(init_integration).subscriber_healthy is True
-    assert hass.states.get(REST_CLIMATE).state != STATE_UNAVAILABLE
+    assert hass.states.get(REST_SMOKE).state != STATE_UNAVAILABLE
 
 
 async def test_subscriber_applies_updates(
@@ -177,14 +178,15 @@ async def test_subscriber_applies_updates(
     init_integration: MockConfigEntry,
     mock_nest_client: AsyncMock,
     subscribe_results: asyncio.Queue[Any],
+    app_launch_data: dict[str, Any],
 ) -> None:
     """An update from the long poll reaches the entity."""
     subscribe_results.put_nowait(
-        {"shared.09AA00AA00AA0AAA": {"target_temperature_type": "off"}}
+        {REST_PROTECT_KEY: {**app_launch_data[REST_PROTECT_KEY], "smoke_status": 2}}
     )
     await _settle(hass, mock_nest_client.async_subscribe_for_updates, 2)
 
-    assert hass.states.get(REST_CLIMATE).state == HVACMode.OFF
+    assert hass.states.get(REST_SMOKE).state == STATE_ON
 
 
 async def test_observer_failure_only_affects_protobuf_devices(
@@ -205,7 +207,7 @@ async def test_observer_failure_only_affects_protobuf_devices(
 
     assert _coordinator(init_integration).observer_healthy is False
     assert hass.states.get(PROTOBUF_CLIMATE).state == STATE_UNAVAILABLE
-    assert hass.states.get(REST_CLIMATE).state != STATE_UNAVAILABLE
+    assert hass.states.get(REST_SMOKE).state != STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -228,7 +230,7 @@ async def test_command_retries_after_reauthenticating(
     await hass.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
-        {ATTR_ENTITY_ID: REST_CLIMATE, "hvac_mode": HVACMode.OFF},
+        {ATTR_ENTITY_ID: PROTOBUF_CLIMATE, "hvac_mode": HVACMode.OFF},
         blocking=True,
     )
 
@@ -250,7 +252,7 @@ async def test_command_gives_up_after_a_failed_reauthentication(
         await hass.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
-            {ATTR_ENTITY_ID: REST_CLIMATE, "hvac_mode": HVACMode.OFF},
+            {ATTR_ENTITY_ID: PROTOBUF_CLIMATE, "hvac_mode": HVACMode.OFF},
             blocking=True,
         )
 

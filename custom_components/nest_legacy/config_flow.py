@@ -25,7 +25,6 @@ from .const import (
     CONF_ENABLE_PROTOBUF_CAMERA,
     CONF_ENABLE_PROTOBUF_PROTECT,
     CONF_ENABLE_PROTOBUF_STRUCTURE,
-    CONF_ENABLE_PROTOBUF_THERMOSTAT,
     CONF_EVENT_POLL_INTERVAL,
     CONF_FIELD_TEST,
     CONF_ISSUE_TOKEN,
@@ -268,12 +267,6 @@ class NestOptionsFlowHandler(OptionsFlowWithReload):
             vol.Required(CONF_SECTION_PROTOBUF): section(
                 vol.Schema(
                     {
-                        vol.Optional(
-                            CONF_ENABLE_PROTOBUF_THERMOSTAT,
-                            default=self.config_entry.options.get(
-                                CONF_ENABLE_PROTOBUF_THERMOSTAT, True
-                            ),
-                        ): bool,
                         vol.Optional(
                             CONF_ENABLE_PROTOBUF_STRUCTURE,
                             default=self.config_entry.options.get(

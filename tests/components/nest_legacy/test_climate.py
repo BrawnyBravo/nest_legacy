@@ -4,6 +4,9 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 from custom_components.nest_legacy.const import DOMAIN
+from custom_components.nest_legacy.pynest.protobuf_gen.nest.trait import (
+    hvac_pb2 as nest_hvac_pb2,
+)
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
@@ -35,20 +38,33 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from . import setup_integration
+from .const import THERMOSTAT_KEY, THERMOSTAT_SERIAL
 
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     snapshot_platform,
 )
 
-ENTITY_ID = "climate.hallway_hallway_thermostat"
-THERMOSTAT = "09AA00AA00AA0AAA"
+ENTITY_ID = "climate.hallway_hallway_upstairs"
+
+_SET_POINT_TYPE = nest_hvac_pb2.SetPointScheduleSettingsTrait.SetPointType
 
 
 @pytest.fixture
 def platforms() -> list[Platform]:
     """Set up only this platform."""
     return [Platform.CLIMATE]
+
+
+@pytest.fixture
+def thermostat(observe_data: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Return the thermostat's traits, to change before setting up."""
+    return observe_data[THERMOSTAT_KEY]
+
+
+def _trait(traits: dict[str, Any], trait_class: type[Any]) -> Any:
+    """Return the thermostat trait of the given class."""
+    return traits[trait_class.DESCRIPTOR.full_name]
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -87,11 +103,16 @@ async def test_celsius_values_keep_half_degrees(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    thermostat: dict[str, Any],
 ) -> None:
     """A Celsius thermostat keeps the half degree resolution the device offers."""
-    app_launch_data[f"device.{THERMOSTAT}"]["temperature_scale"] = "C"
-    app_launch_data[f"shared.{THERMOSTAT}"]["target_temperature"] = 21.5
+    _trait(
+        thermostat, nest_hvac_pb2.DisplaySettingsTrait
+    ).temperatureScale = (
+        nest_hvac_pb2.DisplaySettingsTrait.TemperatureScale.TEMPERATURE_SCALE_C
+    )
+    target = _trait(thermostat, nest_hvac_pb2.TargetTemperatureSettingsTrait)
+    target.targetTemperature.heatingTarget.value = 21.5
     hass.config.units = METRIC_SYSTEM
     await setup_integration(hass, mock_config_entry)
 
@@ -130,7 +151,7 @@ async def test_set_temperature_rounds_to_whole_fahrenheit(
     )
 
     device, data = mock_nest_client.async_set_device_data.call_args[0]
-    assert device.serial_number == THERMOSTAT
+    assert device.serial_number == THERMOSTAT_SERIAL
     assert data["target_temperature"] == pytest.approx(expected_celsius)
 
 
@@ -138,10 +159,12 @@ async def test_set_temperature_range(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    thermostat: dict[str, Any],
 ) -> None:
     """Heat/cool mode sends both setpoints."""
-    app_launch_data[f"shared.{THERMOSTAT}"]["target_temperature_type"] = "range"
+    target = _trait(thermostat, nest_hvac_pb2.TargetTemperatureSettingsTrait)
+    target.targetTemperature.setpointType = _SET_POINT_TYPE.SET_POINT_TYPE_RANGE
+    target.targetTemperature.heatingTarget.value = 20.0
     hass.config.units = US_CUSTOMARY_SYSTEM
     await setup_integration(hass, mock_config_entry)
 
@@ -172,10 +195,12 @@ async def test_heat_only_thermostat(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    thermostat: dict[str, Any],
 ) -> None:
     """A heat only device only offers heat; see issue #38."""
-    app_launch_data[f"shared.{THERMOSTAT}"]["can_cool"] = False
+    _trait(
+        thermostat, nest_hvac_pb2.HvacEquipmentCapabilitiesTrait
+    ).hasStage1Cool = False
     await setup_integration(hass, mock_config_entry)
 
     state = hass.states.get(ENTITY_ID)
@@ -187,12 +212,11 @@ async def test_hvac_action(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    thermostat: dict[str, Any],
 ) -> None:
     """Cooling equipment reports the cooling action."""
-    shared = app_launch_data[f"shared.{THERMOSTAT}"]
-    shared["hvac_heater_state"] = False
-    shared["hvac_ac_state"] = True
+    hvac = _trait(thermostat, nest_hvac_pb2.HvacControlTrait)
+    hvac.hvacState.coolStage1Active = True
     await setup_integration(hass, mock_config_entry)
 
     state = hass.states.get(ENTITY_ID)
@@ -244,14 +268,17 @@ async def test_eco_setpoint_leaves_eco_first(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    thermostat: dict[str, Any],
 ) -> None:
     """Changing the setpoint while in eco asks the client to leave eco first."""
-    shared = app_launch_data[f"shared.{THERMOSTAT}"]
-    shared["eco"] = {"mode": "manual-eco"}
-    shared["away_temperature_low"] = 12.0
-    shared["away_temperature_high"] = 26.0
-    shared["away_temperature_low_enabled"] = True
+    _trait(
+        thermostat, nest_hvac_pb2.EcoModeStateTrait
+    ).ecoMode = nest_hvac_pb2.EcoModeStateTrait.EcoMode.ECO_MODE_MANUAL_ECO
+    eco = nest_hvac_pb2.EcoModeSettingsTrait()
+    eco.ecoTemperatureHeat.enabled = True
+    eco.ecoTemperatureHeat.value.value = 12.0
+    eco.ecoTemperatureCool.value.value = 26.0
+    thermostat[nest_hvac_pb2.EcoModeSettingsTrait.DESCRIPTOR.full_name] = eco
     await setup_integration(hass, mock_config_entry)
 
     state = hass.states.get(ENTITY_ID)
@@ -319,10 +346,10 @@ async def test_set_fan_timer_without_fan(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    thermostat: dict[str, Any],
 ) -> None:
     """A thermostat with no fan rejects the action instead of silently passing."""
-    app_launch_data[f"device.{THERMOSTAT}"]["has_fan"] = False
+    del thermostat[nest_hvac_pb2.FanControlCapabilitiesTrait.DESCRIPTOR.full_name]
     await setup_integration(hass, mock_config_entry)
 
     with pytest.raises(HomeAssistantError) as err:

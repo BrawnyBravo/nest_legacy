@@ -15,20 +15,21 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from . import setup_integration
-from .const import THERMOSTAT_KEY
+from .const import TEMP_SENSOR_KEY, THERMOSTAT_KEY
 
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     snapshot_platform,
 )
 
-THERMOSTAT = "09AA00AA00AA0AAA"
-TEMPERATURE_ENTITY = "sensor.hallway_hallway_thermostat_temperature"
+TEMPERATURE_ENTITY = "sensor.hallway_hallway_upstairs_temperature"
 HVAC_STAGE_ENTITY = "sensor.hallway_hallway_upstairs_hvac_stage"
-LEGACY_HVAC_STAGE_ENTITY = "sensor.hallway_hallway_thermostat_hvac_stage"
-SENSOR_TEMPERATURE_ENTITY = "sensor.bedroom_bedroom_sensor_temperature"
-SENSOR_BATTERY_ENTITY = "sensor.bedroom_bedroom_sensor_battery_level"
+SENSOR_TEMPERATURE_ENTITY = "sensor.hallway_hallway_study_sensor_temperature"
+SENSOR_BATTERY_ENTITY = "sensor.hallway_hallway_study_sensor_battery_level"
 PROTECT_BATTERY_ENTITY = "sensor.hallway_hallway_protect_battery_level"
+CO_PEAK_ENTITY = "sensor.hallway_hallway_protect_co_previous_peak"
+SAFETY_CRITICAL_ENTITY = "sensor.test_home_safety_critical_failures"
+SAFETY_WARNINGS_ENTITY = "sensor.test_home_safety_warnings"
 
 
 @pytest.fixture
@@ -59,7 +60,8 @@ async def test_temperature_sensor_keeps_one_decimal(
     """
     state = hass.states.get(TEMPERATURE_ENTITY)
     assert state is not None
-    assert state.state == "21.11"
+    # The API reports float32, so the hundredths come with some noise.
+    assert float(state.state) == pytest.approx(21.11)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -69,7 +71,7 @@ async def test_remote_sensor_battery_is_not_zero(
     """Remote sensors report their real battery level; see issue #18."""
     state = hass.states.get(SENSOR_BATTERY_ENTITY)
     assert state is not None
-    assert state.state == "92"
+    assert state.state == "71"
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -87,18 +89,18 @@ async def test_internal_sensor_stays_readable_with_a_remote_sensor(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,
     mock_nest_client: AsyncMock,
-    app_launch_data: dict[str, Any],
+    observe_data: dict[str, dict[str, Any]],
 ) -> None:
     """The remote sensor does not hide its own reading; see issue #20."""
-    app_launch_data["rcs_settings.09AA00AA00AA0AAA"]["active_rcs_sensors"] = [
-        "kryptonite.18B430CCCCCC0001"
+    rcs = observe_data[THERMOSTAT_KEY][
+        nest_hvac_pb2.RemoteComfortSensingSettingsTrait.DESCRIPTOR.full_name
     ]
+    rcs.activeRcsSelection.rcsSourceType = nest_hvac_pb2.RemoteComfortSensingSettingsTrait.RcsSourceType.RCS_SOURCE_TYPE_SINGLE_SENSOR
+    rcs.activeRcsSelection.activeRcsSensor.resourceId = TEMP_SENSOR_KEY
     hass.config.units = US_CUSTOMARY_SYSTEM
     await setup_integration(hass, mock_config_entry)
 
-    # The thermostat now follows the remote sensor.
-    assert hass.states.get(TEMPERATURE_ENTITY).state == "67.1"
-    # And the remote sensor still reports itself.
+    assert float(hass.states.get(TEMPERATURE_ENTITY).state) == pytest.approx(69.998)
     assert hass.states.get(SENSOR_TEMPERATURE_ENTITY).state == "67.1"
 
 
@@ -125,9 +127,41 @@ async def test_hvac_stage_reports_the_running_stage(
 async def test_hvac_stage_is_off_while_idle(
     hass: HomeAssistant, init_integration: MockConfigEntry
 ) -> None:
-    """An idle thermostat runs no stage, and the legacy API has no stage at all."""
+    """An idle thermostat runs no stage."""
     state = hass.states.get(HVAC_STAGE_ENTITY)
     assert state is not None
     assert state.state == "off"
 
-    assert hass.states.get(LEGACY_HVAC_STAGE_ENTITY) is None
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_protect_co_previous_peak(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_nest_client: AsyncMock,
+    app_launch_data: dict[str, Any],
+) -> None:
+    """The CO previous peak is reported in ppm."""
+    app_launch_data["topaz.09AA00AA00AA0AA1"]["co_previous_peak"] = 75
+    await setup_integration(hass, mock_config_entry)
+
+    state = hass.states.get(CO_PEAK_ENTITY)
+    assert state.state == "75"
+    assert state.attributes["unit_of_measurement"] == "ppm"
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_structure_safety_summary(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_nest_client: AsyncMock,
+    app_launch_data: dict[str, Any],
+) -> None:
+    """The home reports how many Protect problems Nest has flagged."""
+    app_launch_data["safety_summary.00000000-0000-0000-0000-000000000001"] = {
+        "total_critical_failures": 1,
+        "total_warnings": 3,
+    }
+    await setup_integration(hass, mock_config_entry)
+
+    assert hass.states.get(SAFETY_CRITICAL_ENTITY).state == "1"
+    assert hass.states.get(SAFETY_WARNINGS_ENTITY).state == "3"

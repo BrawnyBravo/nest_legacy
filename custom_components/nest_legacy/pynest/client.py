@@ -2,7 +2,7 @@
 
 import asyncio
 import contextlib
-import datetime
+import datetime as dt
 from email.utils import parsedate_to_datetime
 import logging
 import time
@@ -272,6 +272,17 @@ _LABEL_SPECIFIC_TRAITS: frozenset[str] = frozenset(
     }
 )
 
+
+def _is_non_live_trait_label(trait_label: str) -> bool:
+    """Return True for labels that never hold the device's current state.
+
+    "_bucketized" copies are history, and "unpaired_*" copies are the settings
+    the thermostat keeps for unpaired mode. The paired label is the live one, so
+    both are dropped rather than colliding with it on every poll.
+    """
+    return trait_label.endswith("_bucketized") or trait_label.startswith("unpaired_")
+
+
 _DUAL_FUEL_OVERRIDE_MAP: dict[
     DualFuelBreakpointOverride,
     nest_hvac_pb2.EquipmentSettingsTrait.DualFuelOverride.ValueType,
@@ -318,33 +329,28 @@ _BATCH_UPDATE_ENDPOINT = "/nestlabs.gateway.v1.TraitBatchApi/BatchUpdateState"
 
 _NESTLABS_TYPE_URL_PREFIX = "type.nestlabs.com/"
 
+# Thermostats, temperature sensors and Heat Links are read over protobuf, so
+# their buckets (device, shared, kryptonite, link, track, rcs_settings,
+# demand_response, tuneups) are not requested.
 _NEST_REQUEST: dict[str, Any] = {
     "known_bucket_types": [
         BucketType.BUCKETS,
         BucketType.DELAYED_TOPAZ,
-        BucketType.DEMAND_RESPONSE,
-        BucketType.DEVICE,
         BucketType.DEVICE_ALERT_DIALOG,
         BucketType.GEOFENCE_INFO,
-        BucketType.KRYPTONITE,
-        BucketType.LINK,
         BucketType.MESSAGE,
         BucketType.MESSAGE_CENTER,
         BucketType.METADATA,
         BucketType.OCCUPANCY,
         BucketType.QUARTZ,
         BucketType.SAFETY,
-        BucketType.RCS_SETTINGS,
         BucketType.SAFETY_SUMMARY,
         BucketType.SCHEDULE,
-        BucketType.SHARED,
         BucketType.STRUCTURE,
         BucketType.STRUCTURE_METADATA,
         BucketType.TOPAZ,
         BucketType.TOPAZ_RESOURCE,
-        BucketType.TRACK,
         BucketType.TRIP,
-        BucketType.TUNEUPS,
         BucketType.USER,
         BucketType.USER_SETTINGS,
         BucketType.WHERE,
@@ -438,11 +444,11 @@ def _is_expired_set_cookie(attributes: list[str]) -> bool:
         except ValueError:
             return False
         if expiry.tzinfo is None:
-            expiry = expiry.replace(tzinfo=datetime.UTC)
+            expiry = expiry.replace(tzinfo=dt.UTC)
         # pynest is kept free of homeassistant imports, so dt_util.utcnow()
         # is not available here.
         # pylint: disable-next=home-assistant-enforce-utcnow
-        return expiry <= datetime.datetime.now(datetime.UTC)
+        return expiry <= dt.datetime.now(dt.UTC)
     return False
 
 
@@ -490,7 +496,6 @@ class NestClient:
         self,
         session: ClientSession | None = None,
         field_test: bool = False,
-        enable_protobuf_thermostat: bool = True,
         enable_protobuf_structure: bool = False,
         enable_protobuf_protect: bool = False,
         enable_protobuf_camera: bool = False,
@@ -508,8 +513,10 @@ class NestClient:
         self._resource_types: dict[str, str] = {}
         self._legacy_protobuf_events_warned: bool = False
         self._protobuf_events_unauthorized: set[str] = set()
+        # Collisions do not change between polls, so each one is only reported
+        # once for the lifetime of the client.
+        self._trait_label_collisions_warned: set[tuple[str, str]] = set()
 
-        self._enable_protobuf_thermostat = enable_protobuf_thermostat
         self._enable_protobuf_structure = enable_protobuf_structure
         self._enable_protobuf_protect = enable_protobuf_protect
         self._enable_protobuf_camera = enable_protobuf_camera
@@ -517,15 +524,14 @@ class NestClient:
         # Build set of traits to observe based on flags
         self._observe_traits: set[type[Message]] = set()
         self._observe_traits.update(_OBSERVER_ALWAYS_INCLUDE_TRAITS)
-        # Locks are only ever exposed over protobuf, so their traits are
-        # unconditional; there is no REST alternative to fall back to.
+        # Locks, thermostats, temperature sensors and Heat Links are only
+        # ever read over protobuf, so their traits are unconditional.
         self._observe_traits.update(_OBSERVE_LOCK_TRAITS)
+        self._observe_traits.update(_OBSERVE_THERMOSTAT_TRAITS)
         if enable_protobuf_protect:
             self._observe_traits.update(_OBSERVE_PROTECT_TRAITS)
         if enable_protobuf_camera:
             self._observe_traits.update(_OBSERVE_CAMERA_TRAITS)
-        if enable_protobuf_thermostat:
-            self._observe_traits.update(_OBSERVE_THERMOSTAT_TRAITS)
         if enable_protobuf_structure:
             self._observe_traits.update(_OBSERVE_STRUCTURE_TRAITS)
 
@@ -759,21 +765,19 @@ class NestClient:
 
     def _filter_buckets(self, buckets: list[Bucket]) -> list[Bucket]:
         """Filter buckets based on enabled protobuf features."""
-        excluded_keys = set()
-
-        if self._enable_protobuf_thermostat:
-            excluded_keys.update(
-                {
-                    BucketType.DEVICE,
-                    BucketType.SHARED,
-                    BucketType.KRYPTONITE,
-                    BucketType.LINK,
-                    BucketType.TRACK,
-                    BucketType.RCS_SETTINGS,
-                    BucketType.DEMAND_RESPONSE,
-                    BucketType.TUNEUPS,
-                }
-            )
+        # Thermostats, temperature sensors and Heat Links are read over
+        # protobuf. Their buckets are not requested, but drop them in case the
+        # server sends them anyway.
+        excluded_keys = {
+            BucketType.DEVICE,
+            BucketType.SHARED,
+            BucketType.KRYPTONITE,
+            BucketType.LINK,
+            BucketType.TRACK,
+            BucketType.RCS_SETTINGS,
+            BucketType.DEMAND_RESPONSE,
+            BucketType.TUNEUPS,
+        }
 
         if self._enable_protobuf_protect:
             excluded_keys.update(
@@ -956,47 +960,6 @@ class NestClient:
             else:
                 return
 
-    async def _async_set_thermostat_property(
-        self, object_key: str, data: dict[str, Any]
-    ) -> None:
-        """Set properties for a thermostat."""
-        device_id = object_key.split(".")[1]
-
-        # Translate generic 'hvac_mode' key to legacy API's 'target_temperature_type'
-        if "hvac_mode" in data:
-            data["target_temperature_type"] = data.pop("hvac_mode")
-
-        # Translate semantic exit_eco flag to legacy REST eco payload
-        if data.pop("exit_eco", None):
-            data["eco"] = {"mode": "schedule"}
-
-        shared_properties = {
-            "target_temperature",
-            "target_temperature_low",
-            "target_temperature_high",
-            "target_temperature_type",
-        }
-        shared_payload = {k: v for k, v in data.items() if k in shared_properties}
-        device_payload = {k: v for k, v in data.items() if k not in shared_properties}
-
-        objects_to_update = []
-        if shared_payload:
-            shared_payload["target_change_pending"] = True
-            objects_to_update.append(
-                {
-                    "object_key": f"shared.{device_id}",
-                    "op": "MERGE",
-                    "value": shared_payload,
-                }
-            )
-        if device_payload:
-            objects_to_update.append(
-                {"object_key": object_key, "op": "MERGE", "value": device_payload}
-            )
-
-        if objects_to_update:
-            await self._async_update_objects(objects_to_update)
-
     async def _async_set_generic_property(
         self, object_key: str, data: dict[str, Any]
     ) -> None:
@@ -1012,45 +975,6 @@ class NestClient:
         current_traits: dict[str, Any] | None = None,
     ) -> None:
         """Set properties for a Heat Link."""
-        if (
-            device.associated_thermostat_object_key
-            and "DEVICE_" in device.associated_thermostat_object_key
-        ):
-            await self._async_set_protobuf_heatlink_property(
-                device, data, current_traits
-            )
-            return
-
-        if not device.associated_thermostat_object_key:
-            return
-
-        payload = data.copy()
-
-        # Legacy API does not support hot_water_mode directly
-        payload.pop("hot_water_mode", None)
-
-        if "hot_water_boost" in payload:
-            duration_seconds = payload.pop("hot_water_boost_duration", 1800)
-            is_boost = payload.pop("hot_water_boost")
-            if is_boost:
-                end_timestamp = int(time.time()) + duration_seconds
-            else:
-                end_timestamp = 0
-            payload["hot_water_boost_time_to_end"] = end_timestamp
-            payload["hot_water_active"] = is_boost
-
-        if payload:
-            await self._async_set_generic_property(
-                device.associated_thermostat_object_key, payload
-            )
-
-    async def _async_set_protobuf_heatlink_property(
-        self,
-        device: NestHeatLink,
-        data: dict[str, Any],
-        current_traits: dict[str, Any] | None = None,
-    ) -> None:
-        """Set properties for a Heat Link via Protobuf."""
         if not device.associated_thermostat_object_key:
             return
 
@@ -2021,16 +1945,14 @@ class NestClient:
         )
         await self._async_update_trait_state(req)
 
-    async def _async_set_protobuf_thermostat_property(
+    async def _async_set_thermostat_property(
         self,
         device: NestThermostat,
         data: dict[str, Any],
         current_traits: dict[str, Any] | None = None,
     ) -> None:
-        """Set properties for a protobuf-enabled Nest Thermostat."""
-        _LOGGER.debug(
-            "Setting protobuf thermostat property for %s: %s", device.object_key, data
-        )
+        """Set properties for a Nest Thermostat."""
+        _LOGGER.debug("Setting thermostat property for %s: %s", device.object_key, data)
 
         now = Timestamp()
         now.GetCurrentTime()
@@ -2213,12 +2135,7 @@ class NestClient:
         elif isinstance(device, NestHeatLink):
             await self._async_set_heatlink_property(device, data, current_traits)
         elif isinstance(device, NestThermostat):
-            if device.is_protobuf:
-                await self._async_set_protobuf_thermostat_property(
-                    device, data, current_traits
-                )
-            else:
-                await self._async_set_thermostat_property(device.object_key, data)
+            await self._async_set_thermostat_property(device, data, current_traits)
         elif isinstance(device, NestStructure):
             await self._async_set_structure_property(device, data)
         elif isinstance(device, NestLock):
@@ -2235,8 +2152,6 @@ class NestClient:
                 await self._async_set_sensor_active(
                     device, data["is_active_sensor"], current_traits
                 )
-            else:
-                await self._async_set_generic_property(device.object_key, data)
         else:
             await self._async_set_generic_property(device.object_key, data)
 
@@ -2247,24 +2162,6 @@ class NestClient:
         current_traits: dict[str, Any] | None = None,
     ) -> None:
         """Set a temperature sensor as the active sensor for its thermostat."""
-        if not device.associated_thermostat_object_key:
-            _LOGGER.warning(
-                "Sensor %s is not associated with any thermostat", device.name
-            )
-            return
-
-        if device.is_protobuf:
-            await self._async_set_protobuf_sensor_active(device, active, current_traits)
-        else:
-            await self._async_set_legacy_sensor_active(device, active)
-
-    async def _async_set_protobuf_sensor_active(
-        self,
-        device: NestTempSensor,
-        active: bool,
-        current_traits: dict[str, Any] | None = None,
-    ) -> None:
-        """Set active sensor via Protobuf."""
         # We need the current RCS trait to ensure we don't wipe other settings
         # The RCS trait lives on the Thermostat (associated_thermostat_object_key)
         thermostat_key = device.associated_thermostat_object_key
@@ -2311,31 +2208,6 @@ class NestClient:
             state=any_proto,
         )
         await self._async_update_trait_state(req)
-
-    async def _async_set_legacy_sensor_active(
-        self, device: NestTempSensor, active: bool
-    ) -> None:
-        """Set active sensor via Legacy API."""
-        # For legacy, the key is usually device.<serial>, but rcs_settings uses the serial directly
-        # rcs_settings.<serial>
-        thermostat_key = device.associated_thermostat_object_key
-        if not thermostat_key:
-            _LOGGER.warning(
-                "Sensor %s is not associated with any thermostat", device.name
-            )
-            return
-        device_id = thermostat_key.split(".")[1]
-        rcs_key = f"rcs_settings.{device_id}"
-
-        if active:
-            payload = {
-                "active_rcs_sensors": [device.object_key],
-                "rcs_control_setting": "OVERRIDE",
-            }
-        else:
-            payload = {"active_rcs_sensors": [], "rcs_control_setting": "OFF"}
-
-        await self._async_set_generic_property(rcs_key, payload)
 
     async def async_get_camera_snapshot(self, device: NestCamera) -> bytes | None:
         """Get a snapshot from a camera."""
@@ -2768,7 +2640,7 @@ class NestClient:
                 [v2_pb2.StateType.Name(t) for t in state.stateTypes],
             )
 
-            if trait_label.endswith("_bucketized"):
+            if _is_non_live_trait_label(trait_label):
                 continue
 
             if resource_id not in updates:
@@ -2807,7 +2679,12 @@ class NestClient:
     def _check_trait_label_collisions(
         self, inner_response: v2_pb2.ObserveResponse.ObserveResponse
     ) -> None:
-        """Log warnings when multiple different labels are used for the same trait type."""
+        """Warn once per resource and trait type about labels used for it.
+
+        Only the values behind the first warning are dumped, at DEBUG level:
+        the collision itself does not change between polls, so repeating it
+        would flood the log.
+        """
         seen_labels: dict[str, dict[str, tuple[str, Any]]] = {}
         for state in inner_response.traitStates:
             type_url = state.patch.values.type_url
@@ -2815,7 +2692,7 @@ class NestClient:
             resource_id = state.traitId.resourceId
             trait_label = state.traitId.traitLabel
 
-            if trait_label.endswith("_bucketized"):
+            if _is_non_live_trait_label(trait_label):
                 continue
 
             if resource_id not in seen_labels:
@@ -2824,29 +2701,36 @@ class NestClient:
             existing = seen_labels[resource_id].get(descriptor_full_name)
             if existing:
                 prev_label, prev_state = existing
+                collision = (resource_id, descriptor_full_name)
                 if (
                     prev_label != trait_label
                     and prev_label not in _LABEL_SPECIFIC_TRAITS
                     and trait_label not in _LABEL_SPECIFIC_TRAITS
+                    and collision not in self._trait_label_collisions_warned
                 ):
-                    # Collision! Unpack both to log full details.
+                    self._trait_label_collisions_warned.add(collision)
+                    _LOGGER.warning(
+                        "Multiple traits of type %s on %s "
+                        "with different labels "
+                        "('%s' and '%s'), only one will "
+                        "be used. Consider adding labels "
+                        "to _LABEL_SPECIFIC_TRAITS",
+                        descriptor_full_name,
+                        resource_id,
+                        prev_label,
+                        trait_label,
+                    )
+                    # Unpack both to report the values, once, below the
+                    # warning level.
                     target_class = _TRAIT_TYPE_TO_CLASS_MAP.get(descriptor_full_name)
                     if target_class:
                         msg1, msg2 = target_class(), target_class()
                         prev_state.patch.values.Unpack(msg1)
                         state.patch.values.Unpack(msg2)
-                        _LOGGER.warning(
-                            "Multiple traits of type %s on %s "
-                            "with different labels "
-                            "('%s' and '%s'), only one will "
-                            "be used. Consider adding labels "
-                            "to _LABEL_SPECIFIC_TRAITS.\n"
-                            "Value 1 (%s): %s\n"
-                            "Value 2 (%s): %s",
+                        _LOGGER.debug(
+                            "Colliding traits of type %s on %s: %s=%s, %s=%s",
                             descriptor_full_name,
                             resource_id,
-                            prev_label,
-                            trait_label,
                             prev_label,
                             msg1,
                             trait_label,

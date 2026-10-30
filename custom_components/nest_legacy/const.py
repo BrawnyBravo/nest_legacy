@@ -18,7 +18,6 @@ DEFAULT_EVENT_POLL_INTERVAL: Final = 5
 
 # Protobuf enable options, grouped under a section in the options flow
 CONF_SECTION_PROTOBUF: Final = "protobuf"
-CONF_ENABLE_PROTOBUF_THERMOSTAT: Final = "enable_protobuf_thermostat"
 CONF_ENABLE_PROTOBUF_STRUCTURE: Final = "enable_protobuf_structure"
 CONF_ENABLE_PROTOBUF_PROTECT: Final = "enable_protobuf_protect"
 CONF_ENABLE_PROTOBUF_CAMERA: Final = "enable_protobuf_camera"
